@@ -33,6 +33,7 @@ import html2canvas from "html2canvas";
 import { useBill } from "@/components/BillContext";
 import { useAccount } from "@/components/AccountManager";
 import { Switch } from "@/components/ui/switch";
+import { useStock } from "@/components/StockContext";
 
 // Mock data for reports
 const mockBillReports = [
