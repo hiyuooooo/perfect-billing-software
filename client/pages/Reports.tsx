@@ -1069,6 +1069,19 @@ export default function Reports() {
                                 {bill.items.length} items
                               </span>
                             </td>
+                            <td className="p-3">
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  fixMismatch(bill);
+                                }}
+                                title="Auto-fix this mismatch"
+                              >
+                                <Wand2 className="h-4 w-4" />
+                              </Button>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
