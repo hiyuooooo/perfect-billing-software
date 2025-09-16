@@ -968,13 +968,20 @@ export default function Reports() {
                   generated totals
                 </p>
               </div>
-              <Button
-                onClick={generateMismatchReport}
-                disabled={mismatchReports.length === 0}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Export Mismatches ({mismatchReports.length})
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  onClick={generateMismatchReport}
+                  disabled={mismatchReports.length === 0}
+                  variant="outline"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export ({mismatchReports.length})
+                </Button>
+                <Button onClick={fixAllMismatches} disabled={mismatchReports.length === 0}>
+                  <Wand2 className="h-4 w-4 mr-2" />
+                  Fix All
+                </Button>
+              </div>
             </div>
 
             {mismatchReports.length === 0 ? (
