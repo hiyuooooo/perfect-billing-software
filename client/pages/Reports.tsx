@@ -184,6 +184,42 @@ export default function Reports() {
     return bills.filter((bill) => Math.abs(bill.difference) > 20);
   }, [bills]);
 
+  const fixMismatch = async (bill: any) => {
+    try {
+      const transaction = {
+        id: `AUTOFIX-${bill.id}`,
+        date: bill.date,
+        customerName: bill.customerName,
+        total: bill.expectedTotal,
+        paymentMode: bill.paymentMode,
+      };
+
+      // Delete the original mismatched bill (restore its stock)
+      deleteBill(bill.id, { restoreStock });
+
+      // Generate corrected bill using expected as target and same bill number
+      const availableStock = getUnblockedStock();
+      generateBillsFromTransactions(
+        [transaction],
+        bill.billNumber,
+        [],
+        availableStock,
+        reduceStock,
+      );
+    } catch (e) {
+      console.error("Auto-fix failed:", e);
+      alert("Auto-fix failed. Check console for details.");
+    }
+  };
+
+  const fixAllMismatches = async () => {
+    const snapshot = [...mismatchReports];
+    for (const b of snapshot) {
+      await fixMismatch(b);
+    }
+    alert("Auto-fix completed for all mismatches.");
+  };
+
   const filteredBillReports = useMemo(() => {
     return bills.filter((bill) => {
       const matchesSearch =
