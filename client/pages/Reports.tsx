@@ -24,6 +24,7 @@ import {
   Filter,
   Eye,
   Code,
+  Wand2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import * as XLSX from "xlsx";
