@@ -169,7 +169,8 @@ export default function Reports() {
     to: "",
   });
   const [includeGST, setIncludeGST] = useState(false);
-  const { bills } = useBill();
+  const { bills, deleteBill, generateBillsFromTransactions } = useBill();
+  const { getUnblockedStock, reduceStock, restoreStock } = useStock();
   const { activeAccount } = useAccount();
   const navigate = useNavigate();
 
