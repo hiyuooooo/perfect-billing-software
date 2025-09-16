@@ -1030,6 +1030,7 @@ export default function Reports() {
                           </th>
                           <th className="text-left p-3 font-medium">Status</th>
                           <th className="text-left p-3 font-medium">Items</th>
+                          <th className="text-left p-3 font-medium">Fix</th>
                         </tr>
                       </thead>
                       <tbody>
