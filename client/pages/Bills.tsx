@@ -771,7 +771,7 @@ export default function Bills() {
       iterationMonitor.logIteration(
         monitorId,
         1,
-        `Auto-select completed: ${selectedItems.length} items, total: ₹${currentTotal}, difference: ₹${difference}`,
+        `Auto-select completed: ${selectedItems.length} items, total: ₹${currentTotal}, difference: ���${difference}`,
         "success",
       );
     }
@@ -898,12 +898,12 @@ export default function Bills() {
       date: new Date(newBill.date).toLocaleDateString("en-GB"),
       customerName: displayName,
       items: selectedItems,
-      subTotal: targetTotal > 0 ? targetTotal : generatedTotal, // Use target total if available
-      expectedTotal: targetTotal > 0 ? targetTotal : generatedTotal, // Use target total if available
+      subTotal: generatedTotal, // Actual generated total
+      expectedTotal: targetTotal > 0 ? targetTotal : generatedTotal, // Expected = target if provided
       paymentMode,
       status: "draft",
-      difference: 0, // No difference since we match the target exactly
-      tolerance: 0,
+      difference: (targetTotal > 0 ? targetTotal : generatedTotal) - generatedTotal, // Positive => Under
+      tolerance: Math.abs((targetTotal > 0 ? targetTotal : generatedTotal) - generatedTotal),
       headerInfo: {
         agencyName: "Sadhana Agency",
         address: "Harsila (Dewalchaura), Bageshwar, Uttarakhand",

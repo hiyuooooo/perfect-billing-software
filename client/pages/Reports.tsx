@@ -24,6 +24,7 @@ import {
   Filter,
   Eye,
   Code,
+  Wand2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import * as XLSX from "xlsx";
@@ -32,6 +33,7 @@ import html2canvas from "html2canvas";
 import { useBill } from "@/components/BillContext";
 import { useAccount } from "@/components/AccountManager";
 import { Switch } from "@/components/ui/switch";
+import { useStock } from "@/components/StockContext";
 
 // Mock data for reports
 const mockBillReports = [
@@ -167,7 +169,8 @@ export default function Reports() {
     to: "",
   });
   const [includeGST, setIncludeGST] = useState(false);
-  const { bills } = useBill();
+  const { bills, deleteBill, generateBillsFromTransactions } = useBill();
+  const { getUnblockedStock, reduceStock, restoreStock } = useStock();
   const { activeAccount } = useAccount();
   const navigate = useNavigate();
 
@@ -180,6 +183,42 @@ export default function Reports() {
   const mismatchReports = useMemo(() => {
     return bills.filter((bill) => Math.abs(bill.difference) > 20);
   }, [bills]);
+
+  const fixMismatch = async (bill: any) => {
+    try {
+      const transaction = {
+        id: `AUTOFIX-${bill.id}`,
+        date: bill.date,
+        customerName: bill.customerName,
+        total: bill.expectedTotal,
+        paymentMode: bill.paymentMode,
+      };
+
+      // Delete the original mismatched bill (restore its stock)
+      deleteBill(bill.id, { restoreStock });
+
+      // Generate corrected bill using expected as target and same bill number
+      const availableStock = getUnblockedStock();
+      generateBillsFromTransactions(
+        [transaction],
+        bill.billNumber,
+        [],
+        availableStock,
+        reduceStock,
+      );
+    } catch (e) {
+      console.error("Auto-fix failed:", e);
+      alert("Auto-fix failed. Check console for details.");
+    }
+  };
+
+  const fixAllMismatches = async () => {
+    const snapshot = [...mismatchReports];
+    for (const b of snapshot) {
+      await fixMismatch(b);
+    }
+    alert("Auto-fix completed for all mismatches.");
+  };
 
   const filteredBillReports = useMemo(() => {
     return bills.filter((bill) => {
@@ -929,13 +968,20 @@ export default function Reports() {
                   generated totals
                 </p>
               </div>
-              <Button
-                onClick={generateMismatchReport}
-                disabled={mismatchReports.length === 0}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Export Mismatches ({mismatchReports.length})
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  onClick={generateMismatchReport}
+                  disabled={mismatchReports.length === 0}
+                  variant="outline"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export ({mismatchReports.length})
+                </Button>
+                <Button onClick={fixAllMismatches} disabled={mismatchReports.length === 0}>
+                  <Wand2 className="h-4 w-4 mr-2" />
+                  Fix All
+                </Button>
+              </div>
             </div>
 
             {mismatchReports.length === 0 ? (
@@ -984,6 +1030,7 @@ export default function Reports() {
                           </th>
                           <th className="text-left p-3 font-medium">Status</th>
                           <th className="text-left p-3 font-medium">Items</th>
+                          <th className="text-left p-3 font-medium">Fix</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1021,6 +1068,19 @@ export default function Reports() {
                               <span className="text-sm text-muted-foreground">
                                 {bill.items.length} items
                               </span>
+                            </td>
+                            <td className="p-3">
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  fixMismatch(bill);
+                                }}
+                                title="Auto-fix this mismatch"
+                              >
+                                <Wand2 className="h-4 w-4" />
+                              </Button>
                             </td>
                           </tr>
                         ))}
