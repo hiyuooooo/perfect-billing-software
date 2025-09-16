@@ -759,10 +759,10 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
         customerName: transaction.customerName,
         items: selectedItems,
         subTotal: currentTotal,
-        expectedTotal: currentTotal, // Set expected total = generated total for no mismatch
+        expectedTotal: targetTotal, // Expected should be the transaction's target total
         paymentMode: transaction.paymentMode,
         status: "generated",
-        difference: 0, // No difference since expected = generated
+        difference: targetTotal - currentTotal, // Positive => Under, Negative => Over
         tolerance: difference,
         headerInfo: {
           agencyName: "Sadhana Agency",
