@@ -26,6 +26,7 @@ import {
   Code,
   Wand2,
 } from "lucide-react";
+import { Copy, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
@@ -210,6 +211,36 @@ export default function Reports() {
       console.error("Auto-fix failed:", e);
       alert("Auto-fix failed. Check console for details.");
     }
+  };
+
+  const copyMismatchData = async (bill: any, andDelete = false) => {
+    const text = `Bill No: ${bill.billNumber}\nCustomer: ${bill.customerName}\nDate: ${bill.date}\nExpected: ${bill.expectedTotal}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      if (andDelete) {
+        deleteBill(bill.id, { restoreStock });
+      }
+      alert(andDelete ? "Copied and deleted bill." : "Copied to clipboard.");
+    } catch (e) {
+      console.error("Clipboard copy failed:", e);
+      alert("Could not copy to clipboard.");
+    }
+  };
+
+  const sendToBills = (bill: any, deleteAfter = false) => {
+    const params = new URLSearchParams({
+      prefillBill: String(bill.billNumber),
+      prefillCustomer: bill.customerName,
+      prefillDate: bill.date, // expecting dd-mm-yyyy supported; Bills will handle
+      prefillTarget: String(bill.expectedTotal),
+      prefillPayment: bill.paymentMode || "GPay",
+      prefillAuto: "true",
+      prefillSubmit: "false",
+    });
+    if (deleteAfter) {
+      deleteBill(bill.id, { restoreStock });
+    }
+    window.location.href = `/bills?${params.toString()}`;
   };
 
   const fixAllMismatches = async () => {
@@ -1030,7 +1061,7 @@ export default function Reports() {
                           </th>
                           <th className="text-left p-3 font-medium">Status</th>
                           <th className="text-left p-3 font-medium">Items</th>
-                          <th className="text-left p-3 font-medium">Fix</th>
+                          <th className="text-left p-3 font-medium">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1070,17 +1101,51 @@ export default function Reports() {
                               </span>
                             </td>
                             <td className="p-3">
-                              <Button
-                                size="sm"
-                                variant="secondary"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  fixMismatch(bill);
-                                }}
-                                title="Auto-fix this mismatch"
-                              >
-                                <Wand2 className="h-4 w-4" />
-                              </Button>
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    fixMismatch(bill);
+                                  }}
+                                  title="Auto-fix this mismatch"
+                                >
+                                  <Wand2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    copyMismatchData(bill, false);
+                                  }}
+                                  title="Copy bill data"
+                                >
+                                  <Copy className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    copyMismatchData(bill, true);
+                                  }}
+                                  title="Copy and delete bill"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    sendToBills(bill, false);
+                                  }}
+                                  title="Send to Bills (prefill)"
+                                >
+                                  <Send className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </td>
                           </tr>
                         ))}
