@@ -2955,6 +2955,20 @@ export default function Bills() {
                     </div>
                   </div>
 
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Additional Field</Label>
+                    <Textarea
+                      value={newBill.additionalText}
+                      onChange={(e) =>
+                        setNewBill((prev) => ({
+                          ...prev,
+                          additionalText: e.target.value,
+                        }))
+                      }
+                      placeholder="Notes / Signature / Additional text"
+                    />
+                  </div>
+
                   {/* Payment Mode Selection */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
