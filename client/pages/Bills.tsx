@@ -224,6 +224,30 @@ export default function Bills() {
     }
   }, [searchParams]);
 
+  // Load persisted draft on mount
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem("createBillDraft");
+      if (saved) {
+        const d = JSON.parse(saved);
+        if (d.newBill) setNewBill((prev) => ({ ...prev, ...d.newBill }));
+        if (Array.isArray(d.selectedItems)) setSelectedItems(d.selectedItems);
+        if (typeof d.manualMode === "boolean") setManualMode(d.manualMode);
+        if (d.isCreateDialogOpen) setIsCreateDialogOpen(true);
+      }
+    } catch {}
+  }, []);
+
+  // Persist draft continuously
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(
+        "createBillDraft",
+        JSON.stringify({ newBill, selectedItems, manualMode, isCreateDialogOpen }),
+      );
+    } catch {}
+  }, [newBill, selectedItems, manualMode, isCreateDialogOpen]);
+
   const handleDeleteBill = (billId: string) => {
     if (
       confirm(
