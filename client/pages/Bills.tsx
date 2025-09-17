@@ -173,6 +173,54 @@ export default function Bills() {
     }
   }, [searchParams, bills]);
 
+  // Prefill create dialog from query params (from Reports mismatches)
+  useEffect(() => {
+    const pb = searchParams.get("prefillBill");
+    const pc = searchParams.get("prefillCustomer");
+    const pd = searchParams.get("prefillDate");
+    const pt = searchParams.get("prefillTarget");
+    const pp = searchParams.get("prefillPayment");
+    const auto = searchParams.get("prefillAuto") === "true";
+    const submit = searchParams.get("prefillSubmit") === "true";
+
+    if (pb || pc || pd || pt) {
+      // Normalize date to yyyy-mm-dd for input if provided as dd-mm-yyyy
+      let dateStr = newBill.date;
+      if (pd) {
+        const parts = pd.split("-");
+        if (parts.length === 3) {
+          // dd-mm-yyyy -> yyyy-mm-dd
+          dateStr = `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
+        } else {
+          dateStr = pd;
+        }
+      }
+
+      setIsCreateDialogOpen(true);
+      setManualMode(false);
+      setNewBill((prev) => ({
+        ...prev,
+        billNumber: pb || prev.billNumber,
+        date: dateStr,
+        customerName: pc || prev.customerName,
+        targetTotal: pt || prev.targetTotal,
+        paymentMode: (pp === "Cash" || pp === "GPay") ? (pp as any) : prev.paymentMode,
+      }));
+
+      if (auto && pt) {
+        const target = Number(pt);
+        if (target > 0) {
+          setTimeout(() => {
+            autoSelectItems(target);
+            if (submit) {
+              setTimeout(() => handleCreateBill(), 300);
+            }
+          }, 200);
+        }
+      }
+    }
+  }, [searchParams]);
+
   const handleDeleteBill = (billId: string) => {
     if (
       confirm(
