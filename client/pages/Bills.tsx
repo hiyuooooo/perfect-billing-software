@@ -387,6 +387,7 @@ export default function Bills() {
     customerName: "",
     targetTotal: "",
     paymentMode: "GPay" as "Cash" | "GPay",
+    additionalText: "",
   });
 
   const [selectedItems, setSelectedItems] = useState<BillItem[]>([]);
