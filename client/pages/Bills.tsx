@@ -134,6 +134,7 @@ export default function Bills() {
   const { stockItems, reduceStock, restoreStock, adjustStock } = useStock();
   const { getCustomerSuggestions } = useCustomer();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [highlightedBillNumber, setHighlightedBillNumber] = useState<
     number | null
   >(null);
