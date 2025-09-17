@@ -349,8 +349,10 @@ export default function Bills() {
       customerName: "",
       targetTotal: "",
       paymentMode: "GPay",
+      additionalText: "",
     });
     setItemToAdd({ stockItemId: "", quantity: 1, customPrice: "" });
+    try { sessionStorage.removeItem("createBillDraft"); } catch {}
   };
 
   const switchMode = (mode: boolean) => {
