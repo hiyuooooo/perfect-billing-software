@@ -989,7 +989,7 @@ export default function Bills() {
       footerInfo: {
         declaration:
           "We hereby declare that the tax on supplies has been paid by us under the composition scheme.",
-        signature: "Authorized Signature",
+        signature: newBill.additionalText || "Authorized Signature",
       },
     };
 
