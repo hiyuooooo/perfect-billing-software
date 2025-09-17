@@ -27,6 +27,7 @@ import {
   Wand2,
 } from "lucide-react";
 import { Copy, Send } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
@@ -1378,7 +1379,7 @@ export default function Reports() {
                               <div className="truncate">{item.name}</div>
                               <div>{item.quantity}</div>
                               <div>₹{item.price}</div>
-                              <div>₹{item.total}</div>
+                              <div>��{item.total}</div>
                             </div>
                           ))}
 
