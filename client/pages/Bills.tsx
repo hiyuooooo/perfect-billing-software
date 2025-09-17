@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Layout } from "@/components/Layout";
 import { useBill } from "@/components/BillContext";
-import { useLocation, useSearchParams } from "react-router-dom";
+import { useLocation, useSearchParams, useNavigate } from "react-router-dom";
 import { useStock } from "@/components/StockContext";
 import { useIterationMonitor } from "@/components/IterationMonitor";
 import { useCustomer } from "@/components/CustomerContext";
