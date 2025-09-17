@@ -219,6 +219,8 @@ export default function Bills() {
           }, 200);
         }
       }
+      // Strip query params after applying prefill to avoid re-trigger on refresh
+      setTimeout(() => navigate("/bills", { replace: true }), 0);
     }
   }, [searchParams]);
 
