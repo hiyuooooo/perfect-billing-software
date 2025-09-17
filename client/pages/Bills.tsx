@@ -1010,10 +1010,12 @@ export default function Bills() {
       customerName: "",
       targetTotal: "",
       paymentMode: "GPay",
+      additionalText: "",
     });
     setSelectedItems([]);
     setIsCreateDialogOpen(false);
     setActiveTab("view");
+    try { sessionStorage.removeItem("createBillDraft"); } catch {}
   };
 
   // Generate HTML for single bill
