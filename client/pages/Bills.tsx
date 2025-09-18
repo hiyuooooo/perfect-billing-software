@@ -139,40 +139,6 @@ export default function Bills() {
     number | null
   >(null);
 
-  // Handle highlighting and customer filter from URL parameters
-  useEffect(() => {
-    const highlightParam = searchParams.get("highlight");
-    const customerParam = searchParams.get("customer");
-    const editParam = searchParams.get("edit");
-
-    if (highlightParam) {
-      const billNumber = parseInt(highlightParam);
-      if (!isNaN(billNumber)) {
-        setHighlightedBillNumber(billNumber);
-
-        // If edit=true parameter is present, auto-open edit dialog for the highlighted bill
-        if (editParam === "true") {
-          const billToEdit = bills.find(
-            (bill) => bill.billNumber === billNumber,
-          );
-          if (billToEdit) {
-            setTimeout(() => {
-              startEditBill(billToEdit);
-            }, 100); // Small delay to ensure the component is ready
-          }
-        }
-
-        // Clear highlight after 5 seconds
-        setTimeout(() => {
-          setHighlightedBillNumber(null);
-        }, 5000);
-      }
-    }
-
-    if (customerParam) {
-      setSearchTerm(decodeURIComponent(customerParam));
-    }
-  }, [searchParams, bills]);
 
 
 
@@ -428,6 +394,41 @@ export default function Bills() {
       setTimeout(() => navigate("/bills", { replace: true }), 0);
     }
   }, [searchParams]);
+
+  // Handle highlighting and customer filter from URL parameters
+  useEffect(() => {
+    const highlightParam = searchParams.get("highlight");
+    const customerParam = searchParams.get("customer");
+    const editParam = searchParams.get("edit");
+
+    if (highlightParam) {
+      const billNumber = parseInt(highlightParam);
+      if (!isNaN(billNumber)) {
+        setHighlightedBillNumber(billNumber);
+
+        // If edit=true parameter is present, auto-open edit dialog for the highlighted bill
+        if (editParam === "true") {
+          const billToEdit = bills.find(
+            (bill) => bill.billNumber === billNumber,
+          );
+          if (billToEdit) {
+            setTimeout(() => {
+              startEditBill(billToEdit);
+            }, 100); // Small delay to ensure the component is ready
+          }
+        }
+
+        // Clear highlight after 5 seconds
+        setTimeout(() => {
+          setHighlightedBillNumber(null);
+        }, 5000);
+      }
+    }
+
+    if (customerParam) {
+      setSearchTerm(decodeURIComponent(customerParam));
+    }
+  }, [searchParams, bills]);
 
   // Filter bills based on search and status
   const filteredBills = useMemo(() => {
