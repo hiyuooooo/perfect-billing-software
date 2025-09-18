@@ -219,6 +219,13 @@ export default function Reports() {
     try {
       await navigator.clipboard.writeText(text);
       if (andDelete) {
+        const confirmed = confirm(
+          `Delete bill #${bill.billNumber} after copying? This cannot be undone.`,
+        );
+        if (!confirmed) {
+          alert("Copy kept. Bill not deleted.");
+          return;
+        }
         deleteBill(bill.id, { restoreStock });
       }
       alert(andDelete ? "Copied and deleted bill." : "Copied to clipboard.");
