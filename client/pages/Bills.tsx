@@ -356,12 +356,29 @@ export default function Bills() {
     const submit = searchParams.get("prefillSubmit") === "true";
 
     if (pb || pc || pd || pt) {
+      // If user is already working on a draft, confirm before overwriting
+      const hasDraft =
+        isCreateDialogOpen ||
+        selectedItems.length > 0 ||
+        newBill.customerName.trim() !== "" ||
+        newBill.billNumber.toString().trim() !== "" ||
+        newBill.targetTotal.toString().trim() !== "" ||
+        newBill.additionalText.trim() !== "";
+
+      if (hasDraft) {
+        const proceed = confirm(
+          "You have an unsaved bill draft. Prefill will replace current inputs. Continue?",
+        );
+        if (!proceed) {
+          return; // Do not apply prefill
+        }
+      }
+
       // Normalize date to yyyy-mm-dd for input if provided as dd-mm-yyyy
       let dateStr = newBill.date;
       if (pd) {
         const parts = pd.split("-");
         if (parts.length === 3) {
-          // dd-mm-yyyy -> yyyy-mm-dd
           dateStr = `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
         } else {
           dateStr = pd;
@@ -393,7 +410,7 @@ export default function Bills() {
       // Strip query params after applying prefill to avoid re-trigger on refresh
       setTimeout(() => navigate("/bills", { replace: true }), 0);
     }
-  }, [searchParams]);
+  }, [searchParams, isCreateDialogOpen, selectedItems, newBill]);
 
   // Handle highlighting and customer filter from URL parameters
   useEffect(() => {
