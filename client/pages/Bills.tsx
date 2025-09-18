@@ -978,6 +978,17 @@ export default function Bills() {
   };
 
   const handleCreateBill = () => {
+    if (selectedItems.length === 0) {
+      alert("No items selected. Please auto-generate or add items manually first.");
+      return;
+    }
+
+    const summary = selectedItems.map((i) => `• ${i.name} x ${i.quantity}`).join("\n");
+    const proceed = confirm(
+      `This will deduct stock for:\n\n${summary}\n\nProceed to create bill and update stock?`,
+    );
+    if (!proceed) return;
+
     const paymentMode = getPaymentMode(newBill.customerName);
     const displayName = cleanCustomerName(newBill.customerName);
 
