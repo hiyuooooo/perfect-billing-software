@@ -216,22 +216,71 @@ export default function Reports() {
 
   const copyMismatchData = async (bill: any, andDelete = false) => {
     const text = `Bill No: ${bill.billNumber}\nCustomer: ${bill.customerName}\nDate: ${bill.date}\nExpected: ${bill.expectedTotal}`;
-    try {
-      await navigator.clipboard.writeText(text);
-      if (andDelete) {
-        const confirmed = confirm(
-          `Delete bill #${bill.billNumber} after copying? This cannot be undone.`,
-        );
-        if (!confirmed) {
-          alert("Copy kept. Bill not deleted.");
-          return;
-        }
-        deleteBill(bill.id, { restoreStock });
+
+    const fallbackCopy = (t: string) => {
+      try {
+        const textarea = document.createElement("textarea");
+        textarea.value = t;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        textarea.style.left = "-9999px";
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        const ok = document.execCommand("copy");
+        document.body.removeChild(textarea);
+        return ok;
+      } catch {
+        return false;
       }
-      alert(andDelete ? "Copied and deleted bill." : "Copied to clipboard.");
+    };
+
+    const downloadText = (t: string, filename: string) => {
+      const blob = new Blob([t], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    };
+
+    let copied = false;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        copied = true;
+      }
     } catch (e) {
-      console.error("Clipboard copy failed:", e);
-      alert("Could not copy to clipboard.");
+      console.warn("Primary clipboard failed, trying fallback copy:", e);
+    }
+
+    if (!copied) {
+      copied = fallbackCopy(text);
+    }
+
+    if (!copied) {
+      downloadText(text, `bill_${bill.billNumber}_mismatch.txt`);
+      alert("Clipboard is blocked by browser policy. Downloaded a text file instead.");
+    }
+
+    if (andDelete) {
+      const confirmed = confirm(
+        `Delete bill #${bill.billNumber} ${copied ? "after copying" : "after downloading"}? This cannot be undone.`,
+      );
+      if (!confirmed) {
+        alert(copied ? "Copy kept. Bill not deleted." : "File kept. Bill not deleted.");
+        return;
+      }
+      deleteBill(bill.id, { restoreStock });
+      alert(copied ? "Copied and deleted bill." : "Downloaded and deleted bill info.");
+      return;
+    }
+
+    if (copied) {
+      alert("Copied to clipboard.");
     }
   };
 
