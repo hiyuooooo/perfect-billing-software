@@ -221,23 +221,38 @@ export default function Bills() {
     setEditItems((prev) => prev.filter((_, i) => i !== index));
   };
 
+  // Helpers to enforce price constraints relative to base (MRP)
+  const basePriceById = React.useMemo(() => {
+    const map = new Map<number, number>();
+    stockItems.forEach((s: any) => map.set(s.id, (s.mrp ?? s.price)));
+    return map;
+  }, [stockItems]);
+  const clampToPriceBand = (id: number, price: number) => {
+    const base = basePriceById.get(id) ?? price;
+    const min = base - 5;
+    const max = base + 5;
+    return Math.min(max, Math.max(min, price));
+  };
+
   const addManualItem = () => {
     const stockItem = stockItems.find(
       (item) => item.id === parseInt(itemToAdd.stockItemId),
     );
     if (!stockItem) return;
 
-    const price = itemToAdd.customPrice
+    const base = (stockItem as any).mrp ?? stockItem.price;
+    const desired = itemToAdd.customPrice
       ? parseFloat(itemToAdd.customPrice)
-      : (stockItem as any).mrp ?? stockItem.price;
+      : base;
+    const price = clampToPriceBand(stockItem.id, isNaN(desired) ? base : desired);
     const total = price * itemToAdd.quantity;
 
     const newItem: BillItem = {
       id: stockItem.id,
       name: stockItem.itemName,
-      price: price,
+      price,
       quantity: itemToAdd.quantity,
-      total: total,
+      total,
     };
 
     setSelectedItems((prev) => [...prev, newItem]);
@@ -252,11 +267,20 @@ export default function Bills() {
     setSelectedItems((prev) =>
       prev.map((item, i) => {
         if (i === index) {
-          const updated = { ...item, [field]: value };
+          const updated = { ...item } as any;
+          if (field === "price") {
+            const numeric = parseFloat(value);
+            const clamped = clampToPriceBand(item.id, isNaN(numeric) ? item.price : numeric);
+            updated.price = clamped;
+          } else if (field === "quantity") {
+            updated.quantity = value;
+          } else {
+            (updated as any)[field] = value;
+          }
           if (field === "price" || field === "quantity") {
             updated.total = updated.price * updated.quantity;
           }
-          return updated;
+          return updated as BillItem;
         }
         return item;
       }),
@@ -949,32 +973,37 @@ export default function Bills() {
 
     console.log("Generated items:", result.items);
 
-    // Adjust the total to exactly match the target
-    let adjustedItems = [...result.items];
-    let currentTotal = result.total;
-    const difference = targetTotal - currentTotal;
+    // Reset prices to base (MRP) and then adjust within ±5 band to reduce difference
+    let adjustedItems = result.items.map((it) => {
+      const base = basePriceById.get(it.id) ?? it.price;
+      return { ...it, price: base, total: base * it.quantity } as BillItem;
+    });
 
-    if (difference !== 0 && adjustedItems.length > 0) {
-      console.log(`Adjusting total by ₹${difference} to match target exactly`);
+    let currentTotal = adjustedItems.reduce((s, it) => s + it.total, 0);
+    let remaining = Math.round((targetTotal - currentTotal) * 100) / 100;
 
-      // Find the item with the highest quantity to adjust
-      const itemToAdjust = adjustedItems.reduce((max, item) =>
-        item.quantity > max.quantity ? item : max,
-      );
-
-      if (itemToAdjust) {
-        // Adjust the price of the item to make the total exact
-        const priceAdjustment = difference / itemToAdjust.quantity;
-        itemToAdjust.price = Math.max(1, itemToAdjust.price + priceAdjustment);
-        itemToAdjust.total = itemToAdjust.price * itemToAdjust.quantity;
-
-        // Recalculate total
-        currentTotal = adjustedItems.reduce((sum, item) => sum + item.total, 0);
-
-        console.log(
-          `Adjusted ${itemToAdjust.name} price to ₹${itemToAdjust.price.toFixed(2)}`,
-        );
-        console.log(`New total: ₹${currentTotal}, target: ₹${targetTotal}`);
+    if (remaining !== 0 && adjustedItems.length > 0) {
+      const increase = remaining > 0;
+      // Distribute remaining across items, capped by ±5 per unit
+      for (let i = 0; i < adjustedItems.length && remaining !== 0; i++) {
+        const it = adjustedItems[i];
+        const base = basePriceById.get(it.id) ?? it.price;
+        const maxDeltaPerUnit = 5;
+        const currDeltaPerUnit = it.price - base;
+        const capacityPerUnit = increase
+          ? Math.max(0, maxDeltaPerUnit - currDeltaPerUnit)
+          : Math.max(0, maxDeltaPerUnit + currDeltaPerUnit); // since currDeltaPerUnit can be negative
+        const capacityTotal = capacityPerUnit * it.quantity;
+        if (capacityTotal <= 0) continue;
+        const apply = increase
+          ? Math.min(remaining, capacityTotal)
+          : -Math.min(Math.abs(remaining), capacityTotal);
+        const perUnitAdj = apply / it.quantity;
+        const newPrice = clampToPriceBand(it.id, it.price + perUnitAdj);
+        it.price = newPrice;
+        it.total = it.price * it.quantity;
+        currentTotal = adjustedItems.reduce((s, x) => s + x.total, 0);
+        remaining = Math.round((targetTotal - currentTotal) * 100) / 100;
       }
     }
 
