@@ -285,19 +285,38 @@ export default function Reports() {
   };
 
   const sendToBills = (bill: any, deleteAfter = false) => {
+    // Force-save all account data to localStorage before navigation
+    try {
+      if (activeAccount?.id) {
+        window.dispatchEvent(
+          new CustomEvent("force-save-account-data", {
+            detail: { accountId: activeAccount.id },
+          }),
+        );
+      }
+    } catch {}
+
     const params = new URLSearchParams({
       prefillBill: String(bill.billNumber),
       prefillCustomer: bill.customerName,
-      prefillDate: bill.date, // expecting dd-mm-yyyy supported; Bills will handle
+      prefillDate: bill.date,
       prefillTarget: String(bill.expectedTotal),
       prefillPayment: bill.paymentMode || "GPay",
       prefillAuto: "true",
       prefillSubmit: "false",
     });
+
     if (deleteAfter) {
-      deleteBill(bill.id, { restoreStock });
+      const confirmed = confirm(
+        `Also delete mismatch bill #${bill.billNumber} after sending to Bills? Stock will be restored.`,
+      );
+      if (confirmed) {
+        deleteBill(bill.id, { restoreStock });
+      }
     }
-    window.location.href = `/bills?${params.toString()}`;
+
+    // Use SPA navigation to avoid full reload which could drop volatile state
+    navigate(`/bills?${params.toString()}`);
   };
 
   const fixAllMismatches = async () => {
