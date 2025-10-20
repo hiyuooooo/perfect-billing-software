@@ -5,6 +5,7 @@ import { useLocation, useSearchParams, useNavigate } from "react-router-dom";
 import { useStock } from "@/components/StockContext";
 import { useIterationMonitor } from "@/components/IterationMonitor";
 import { useCustomer } from "@/components/CustomerContext";
+import { useAccount } from "@/components/AccountManager";
 import { Button } from "@/components/ui/button";
 import {
   Card,
