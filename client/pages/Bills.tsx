@@ -588,11 +588,11 @@ export default function Bills() {
       ) {
         const item = shuffledItems[itemIndex];
 
-        // Try different quantities (up to 2 as per requirements)
+        // Try different quantities (up to 5 or available stock)
         let bestQty = 0;
         let bestQtyTotal = 0;
 
-        for (let qty = 1; qty <= Math.min(2, item.availableQuantity); qty++) {
+        for (let qty = 1; qty <= Math.min(5, item.availableQuantity); qty++) {
           const itemCost = item.price * qty;
           const newTotal = currentTotal + itemCost;
 
