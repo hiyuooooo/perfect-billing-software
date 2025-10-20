@@ -573,12 +573,12 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
     const stockToUse =
       availableStock.length > 0
         ? availableStock
-            .filter((item) => item.availableQuantity > 0) // Only include items with stock
+            .filter((item) => item.availableQuantity > 0)
             .map((item) => ({
-              id: item.id,
-              name: item.itemName,
-              price: item.price,
-              availableQuantity: item.availableQuantity,
+              id: (item as any).id,
+              name: (item as any).itemName,
+              price: (item as any).mrp ?? (item as any).price,
+              availableQuantity: (item as any).availableQuantity,
             }))
         : [
             { id: 1, name: "Rice (1kg)", price: 80, availableQuantity: 150 },

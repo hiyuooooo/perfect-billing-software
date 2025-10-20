@@ -228,7 +228,7 @@ export default function Bills() {
 
     const price = itemToAdd.customPrice
       ? parseFloat(itemToAdd.customPrice)
-      : stockItem.price;
+      : (stockItem as any).mrp ?? stockItem.price;
     const total = price * itemToAdd.quantity;
 
     const newItem: BillItem = {
@@ -262,6 +262,9 @@ export default function Bills() {
     );
   };
 
+  const { activeAccount } = React.useContext(require("@/components/AccountManager").default?.Context || ({} as any)) || { activeAccount: null };
+  const draftKey = React.useMemo(() => `createBillDraft_${(activeAccount as any)?.id || 'global'}`, [(activeAccount as any)?.id]);
+
   const resetCreateBillForm = () => {
     setSelectedItems([]);
     setNewBill({
@@ -273,7 +276,7 @@ export default function Bills() {
       additionalText: "",
     });
     setItemToAdd({ stockItemId: "", quantity: 1, customPrice: "" });
-    try { sessionStorage.removeItem("createBillDraft"); } catch {}
+    try { localStorage.removeItem(draftKey); } catch {}
   };
 
   const switchMode = (mode: boolean) => {
@@ -321,10 +324,10 @@ export default function Bills() {
     customPrice: "",
   });
 
-  // Load persisted draft on mount
+  // Load persisted draft on mount and when account changes
   useEffect(() => {
     try {
-      const saved = sessionStorage.getItem("createBillDraft");
+      const saved = localStorage.getItem(draftKey);
       if (saved) {
         const d = JSON.parse(saved);
         if (d.newBill) setNewBill((prev) => ({ ...prev, ...d.newBill }));
@@ -333,17 +336,17 @@ export default function Bills() {
         if (d.isCreateDialogOpen) setIsCreateDialogOpen(true);
       }
     } catch {}
-  }, []);
+  }, [draftKey]);
 
   // Persist draft continuously
   useEffect(() => {
     try {
-      sessionStorage.setItem(
-        "createBillDraft",
+      localStorage.setItem(
+        draftKey,
         JSON.stringify({ newBill, selectedItems, manualMode, isCreateDialogOpen }),
       );
     } catch {}
-  }, [newBill, selectedItems, manualMode, isCreateDialogOpen]);
+  }, [newBill, selectedItems, manualMode, isCreateDialogOpen, draftKey]);
 
   // Prefill create dialog from query params (from Reports mismatches)
   useEffect(() => {
@@ -736,16 +739,24 @@ export default function Bills() {
       previousItems,
     );
 
-    // Get available items that aren't in previous bill
-    let availableItems = stockItems.filter(
+    // Build available items using MRP when available and avoid previous items
+    let baseItems = stockItems.filter(
       (item) =>
         item.availableQuantity > 0 && !previousItems.includes(item.itemName),
     );
 
-    if (availableItems.length < 2) {
+    if (baseItems.length < 2) {
       // If not enough unique items available, use all available items
-      availableItems = stockItems.filter((item) => item.availableQuantity > 0);
+      baseItems = stockItems.filter((item) => item.availableQuantity > 0);
     }
+
+    // Normalize to a local shape using unitPrice = mrp || price
+    const availableItems = baseItems.map((it) => ({
+      id: it.id,
+      itemName: it.itemName,
+      price: (it as any).mrp ?? it.price,
+      availableQuantity: it.availableQuantity,
+    }));
 
     console.log("Available items:", availableItems.length);
 
@@ -906,12 +917,15 @@ export default function Bills() {
     const stockForAlgorithm = stockItems
       .filter((item) => item.availableQuantity > 0)
       .sort((a, b) => a.itemName.localeCompare(b.itemName))
-      .map((item) => ({
-        id: item.id,
-        name: item.itemName,
-        price: item.price,
-        availableQuantity: item.availableQuantity,
-      }));
+      .map((item) => {
+        const unitPrice = (item as any).mrp ?? item.price;
+        return {
+          id: item.id,
+          name: item.itemName,
+          price: unitPrice,
+          availableQuantity: item.availableQuantity,
+        };
+      });
 
     // Switch to iteration monitor tab to show progress
     setActiveTab("monitor");
