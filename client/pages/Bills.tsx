@@ -1060,7 +1060,7 @@ export default function Bills() {
     setSelectedItems([]);
     setIsCreateDialogOpen(false);
     setActiveTab("view");
-    try { sessionStorage.removeItem("createBillDraft"); } catch {}
+    try { localStorage.removeItem(draftKey); } catch {}
   };
 
   // Generate HTML for single bill
