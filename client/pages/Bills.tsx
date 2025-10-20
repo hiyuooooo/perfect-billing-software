@@ -535,7 +535,7 @@ export default function Bills() {
 
     let bestMatch: { items: BillItem[]; total: number } | null = null;
     let closestDiff = Infinity;
-    const tolerance = 30; // ±30 tolerance
+    const tolerance = 20; // ±20 tolerance
     let iterationsPerformed = 0;
 
     // Start iteration monitoring
@@ -588,11 +588,11 @@ export default function Bills() {
       ) {
         const item = shuffledItems[itemIndex];
 
-        // Try different quantities (up to 5 or available stock)
+        // Try different quantities (no fixed cap; bounded by available stock and practicality)
         let bestQty = 0;
         let bestQtyTotal = 0;
-
-        for (let qty = 1; qty <= Math.min(5, item.availableQuantity); qty++) {
+        const maxQty = Math.max(1, Math.min(item.availableQuantity, Math.ceil((targetTotal - currentTotal) / Math.max(1, item.price)) + 2));
+        for (let qty = 1; qty <= maxQty; qty++) {
           const itemCost = item.price * qty;
           const newTotal = currentTotal + itemCost;
 
@@ -985,14 +985,14 @@ export default function Bills() {
     if (remaining !== 0 && adjustedItems.length > 0) {
       const increase = remaining > 0;
       // Distribute remaining across items, capped by ±5 per unit
-      for (let i = 0; i < adjustedItems.length && remaining !== 0; i++) {
+      for (let i = 0; i < adjustedItems.length && Math.abs(remaining) > 0.01; i++) {
         const it = adjustedItems[i];
         const base = basePriceById.get(it.id) ?? it.price;
         const maxDeltaPerUnit = 5;
         const currDeltaPerUnit = it.price - base;
         const capacityPerUnit = increase
           ? Math.max(0, maxDeltaPerUnit - currDeltaPerUnit)
-          : Math.max(0, maxDeltaPerUnit + currDeltaPerUnit); // since currDeltaPerUnit can be negative
+          : Math.max(0, maxDeltaPerUnit + currDeltaPerUnit);
         const capacityTotal = capacityPerUnit * it.quantity;
         if (capacityTotal <= 0) continue;
         const apply = increase
@@ -1004,6 +1004,62 @@ export default function Bills() {
         it.total = it.price * it.quantity;
         currentTotal = adjustedItems.reduce((s, x) => s + x.total, 0);
         remaining = Math.round((targetTotal - currentTotal) * 100) / 100;
+      }
+    }
+
+    // If still beyond ±20, try quantity tweaks within stock and item cap (7 items total)
+    if (Math.abs(targetTotal - currentTotal) > 20) {
+      const getStockAvail = (id: number) => {
+        const s = stockItems.find((x) => x.id === id);
+        return s ? s.availableQuantity : 9999;
+      };
+
+      let safety = 100;
+      while (Math.abs(targetTotal - currentTotal) > 20 && safety-- > 0) {
+        const diff = targetTotal - currentTotal;
+        if (diff > 0) {
+          // Prefer increasing qty of existing items within stock
+          let applied = false;
+          for (const it of adjustedItems) {
+            const avail = getStockAvail(it.id);
+            if (it.quantity < avail) {
+              it.quantity += 1;
+              it.total = it.price * it.quantity;
+              applied = true;
+              break;
+            }
+          }
+          if (!applied && adjustedItems.length < 7) {
+            // Add a cheapest new item if possible
+            const candidates = stockItems
+              .filter((s) => s.availableQuantity > 0 && !adjustedItems.some((ai) => ai.id === s.id))
+              .sort((a, b) => (a.mrp ?? a.price) - (b.mrp ?? b.price));
+            if (candidates.length > 0) {
+              const s = candidates[0] as any;
+              const price = clampToPriceBand(s.id, (s.mrp ?? s.price));
+              adjustedItems.push({ id: s.id, name: s.itemName, price, quantity: 1, total: price });
+              applied = true;
+            }
+          }
+        } else {
+          // diff < 0 => reduce quantity or remove small items
+          let applied = false;
+          for (const it of adjustedItems) {
+            if (it.quantity > 1) {
+              it.quantity -= 1;
+              it.total = it.price * it.quantity;
+              applied = true;
+              break;
+            }
+          }
+          if (!applied && adjustedItems.length > 2) {
+            // Remove the cheapest line
+            adjustedItems.sort((a, b) => a.total - b.total);
+            adjustedItems.shift();
+            applied = true;
+          }
+        }
+        currentTotal = adjustedItems.reduce((s, x) => s + x.total, 0);
       }
     }
 
