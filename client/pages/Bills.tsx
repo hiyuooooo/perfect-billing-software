@@ -864,11 +864,10 @@ export default function Bills() {
     }
 
     // Step 3: Try to increase quantities of existing items if under target
-    if (currentTotal < targetTotal - 10) {
+    if (currentTotal < targetTotal - 20) {
       for (const billItem of selectedItems) {
         if (
-          billItem.quantity < 5 &&
-          currentTotal + billItem.price <= targetTotal + 30
+          currentTotal + billItem.price <= targetTotal + 20
         ) {
           const originalItem = stockItems.find(
             (item) => item.id === billItem.id,
