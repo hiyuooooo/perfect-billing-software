@@ -676,9 +676,9 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
             currentTotal += billItem.total;
           }
         } else if (availableForFallback.length === 1) {
-          // Only one item available, use it with quantity 2 if possible
+          // Only one item available, use it with quantity up to 5 if possible
           const item = availableForFallback[0];
-          const maxQty = Math.min(2, item.availableQuantity);
+          const maxQty = Math.min(5, item.availableQuantity);
           selectedItems = [
             {
               id: item.id,
