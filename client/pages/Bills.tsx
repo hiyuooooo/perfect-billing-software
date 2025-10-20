@@ -867,7 +867,7 @@ export default function Bills() {
     if (currentTotal < targetTotal - 10) {
       for (const billItem of selectedItems) {
         if (
-          billItem.quantity < 2 &&
+          billItem.quantity < 5 &&
           currentTotal + billItem.price <= targetTotal + 30
         ) {
           const originalItem = stockItems.find(
