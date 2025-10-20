@@ -263,8 +263,8 @@ export default function Bills() {
     );
   };
 
-  const { activeAccount } = React.useContext(require("@/components/AccountManager").default?.Context || ({} as any)) || { activeAccount: null };
-  const draftKey = React.useMemo(() => `createBillDraft_${(activeAccount as any)?.id || 'global'}`, [(activeAccount as any)?.id]);
+  const { activeAccount } = useAccount();
+  const draftKey = React.useMemo(() => `createBillDraft_${activeAccount?.id || 'global'}`, [activeAccount?.id]);
 
   const resetCreateBillForm = () => {
     setSelectedItems([]);
