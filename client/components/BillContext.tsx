@@ -320,7 +320,7 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
 
     let bestMatch: { items: BillItem[]; total: number } | null = null;
     let closestDiff = Infinity;
-    const tolerance = 5; // Reduced tolerance to ±5 for better accuracy
+    const tolerance = 20; // Final difference tolerance ±20
     let iterationsPerformed = 0;
 
     // Start iteration monitoring if bill number provided
@@ -362,8 +362,8 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
 
       const selectedItems: BillItem[] = [];
       let currentTotal = 0;
-      // Vary the number of items from 2 to 7 for more realistic bills
-      const maxItems = Math.floor(Math.random() * 6) + 2; // Random between 2-7 items
+      // Cap number of line items to maximum 7 per bill
+      const maxItems = 7;
 
       // First, ensure we get at least 2 items by being more lenient
       let itemsAdded = 0;
@@ -377,11 +377,11 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
       ) {
         const item = shuffledItems[itemIndex];
 
-        // Try different quantities (up to 5 or available stock)
+        // Try different quantities (bounded by available stock and remaining target)
         let bestQty = 0;
         let bestQtyTotal = 0;
-
-        for (let qty = 1; qty <= Math.min(5, item.availableQuantity); qty++) {
+        const maxQty = Math.max(1, Math.min(item.availableQuantity, Math.ceil((targetTotal - currentTotal) / Math.max(1, item.price)) + 2));
+        for (let qty = 1; qty <= maxQty; qty++) {
           const itemCost = item.price * qty;
           const newTotal = currentTotal + itemCost;
 
@@ -692,9 +692,9 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // Check tolerance constraint (±5 for better accuracy)
+      // Check tolerance constraint (±20)
       const difference = Math.abs(currentTotal - targetTotal);
-      if (difference > 5) {
+      if (difference > 20) {
         console.warn(
           `Bill ${currentBillNumber} exceeds ±5 tolerance: difference ${difference}`,
         );
