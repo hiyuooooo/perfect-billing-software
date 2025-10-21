@@ -1394,6 +1394,7 @@ export default function Reports() {
                         );
                         const startDate = new Date(bulkPdfDateRange.from);
                         const endDate = new Date(bulkPdfDateRange.to);
+                        endDate.setHours(23,59,59,999);
                         return billDate >= startDate && billDate <= endDate;
                       }).length
                     }{" "}
