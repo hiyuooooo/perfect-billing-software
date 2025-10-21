@@ -469,6 +469,21 @@ export default function Reports() {
         console.warn("Could not load invoice settings for mega report:", error);
       }
     }
+    const list = bills.filter((bill) => {
+      if (!dateFilter.from && !dateFilter.to) return true;
+      const billDate = new Date(bill.date.split("-").reverse().join("-"));
+      if (dateFilter.from) {
+        const from = new Date(dateFilter.from);
+        if (billDate < from) return false;
+      }
+      if (dateFilter.to) {
+        const to = new Date(dateFilter.to);
+        to.setHours(23, 59, 59, 999);
+        if (billDate > to) return false;
+      }
+      return true;
+    });
+
     return `
       <!DOCTYPE html>
       <html>
@@ -500,7 +515,7 @@ export default function Reports() {
           ${invoiceSettings?.gstNumber && includeGST ? `<p><strong>GST: ${invoiceSettings.gstNumber}</strong></p>` : ""}
         </div>
 
-        ${bills
+        ${list
           .map(
             (bill, index) => `
           <div class="bill-section">
@@ -546,9 +561,9 @@ export default function Reports() {
           .join("")}
 
         <div class="grand-total">
-          <div>TOTAL SALES: ₹${bills.reduce((sum, bill) => sum + bill.subTotal, 0).toLocaleString()}</div>
+          <div>TOTAL SALES: ₹${list.reduce((sum, bill) => sum + bill.subTotal, 0).toLocaleString()}</div>
           <div style="font-size: 14px; margin-top: 10px;">
-            Total Bills: ${bills.length} | Total Items: ${bills.reduce((sum, bill) => sum + bill.items.length, 0)}
+            Total Bills: ${list.length} | Total Items: ${list.reduce((sum, bill) => sum + bill.items.length, 0)}
           </div>
         </div>
       </body>
