@@ -577,8 +577,8 @@ export default function Bills() {
 
       const selectedItems: BillItem[] = [];
       let currentTotal = 0;
-      // Vary the number of items from 2 to 7 for more realistic bills
-      const maxItems = Math.floor(Math.random() * 6) + 2; // Random between 2-7 items
+      // Cap number of items to maximum 7 per bill
+      const maxItems = 7;
 
       // First, ensure we get at least 2 items by being more lenient
       for (
@@ -3177,7 +3177,7 @@ export default function Bills() {
                             • Generated total exactly matches target amount
                           </li>
                           <li>
-                            • Maximum 7 items per bill, up to 2 quantity each
+                            • Maximum 7 items per bill; quantity adjusts as needed
                           </li>
                         </ul>
                       </div>
@@ -3368,7 +3368,7 @@ export default function Bills() {
                                       className="w-24"
                                     />
                                   ) : (
-                                    `₹${item.price}`
+                                    `���${item.price}`
                                   )}
                                 </td>
                                 <td className="p-3">��{item.total}</td>
