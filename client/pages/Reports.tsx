@@ -696,6 +696,7 @@ export default function Reports() {
         const billDate = new Date(bill.date.split("-").reverse().join("-")); // Convert DD-MM-YYYY to YYYY-MM-DD
         const startDate = new Date(from);
         const endDate = new Date(to);
+        endDate.setHours(23, 59, 59, 999);
         return billDate >= startDate && billDate <= endDate;
       });
 
