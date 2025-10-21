@@ -1105,6 +1105,38 @@ export default function Transactions() {
                                 <Button
                                   size="sm"
                                   variant="outline"
+                                  title="Auto Bill"
+                                  onClick={() => {
+                                    try {
+                                      if (activeAccount?.id) {
+                                        window.dispatchEvent(
+                                          new CustomEvent("force-save-account-data", {
+                                            detail: { accountId: activeAccount.id },
+                                          }),
+                                        );
+                                      }
+                                      const nextBill = bills.length > 0 ? Math.max(...bills.map((b: any) => b.billNumber)) + 1 : 1001;
+                                      const cleanCustomer = transaction.customerName.endsWith("_c") ? transaction.customerName.slice(0, -2) : transaction.customerName;
+                                      const params = new URLSearchParams({
+                                        prefillBill: String(nextBill),
+                                        prefillCustomer: cleanCustomer,
+                                        prefillDate: transaction.date,
+                                        prefillTarget: String(transaction.total),
+                                        prefillPayment: getPaymentMode(transaction.customerName),
+                                        prefillAuto: "true",
+                                        prefillSubmit: "false",
+                                      });
+                                      window.location.href = `/bills?${params.toString()}`;
+                                    } catch (e) {
+                                      console.error(e);
+                                    }
+                                  }}
+                                >
+                                  <FileText className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
                                   onClick={() =>
                                     generateTransactionPDF(transaction)
                                   }
