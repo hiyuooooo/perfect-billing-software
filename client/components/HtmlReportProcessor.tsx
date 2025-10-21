@@ -29,6 +29,7 @@ import { HtmlProcessor, demonstratePythonWorkflow } from "@/lib/htmlProcessor";
 export default function HtmlReportProcessor() {
   const { bills } = useBill();
   const { activeAccount } = useAccount();
+  const [dateFilter, setDateFilter] = useState({ from: "", to: "" });
 
   // Load saved settings from localStorage or use empty defaults
   const [headerConfig, setHeaderConfig] = useState(() => {
@@ -172,6 +173,20 @@ export default function HtmlReportProcessor() {
   };
 
   const generateBaseHtmlReport = (): string => {
+    const list = bills.filter((bill) => {
+      if (!dateFilter.from && !dateFilter.to) return true;
+      const billDate = new Date(bill.date.split("-").reverse().join("-"));
+      if (dateFilter.from) {
+        const from = new Date(dateFilter.from);
+        if (billDate < from) return false;
+      }
+      if (dateFilter.to) {
+        const to = new Date(dateFilter.to);
+        to.setHours(23, 59, 59, 999);
+        if (billDate > to) return false;
+      }
+      return true;
+    });
     return `
       <!DOCTYPE html>
       <html>
@@ -204,7 +219,7 @@ export default function HtmlReportProcessor() {
           <!-- Header info will be added by processor -->
         </div>
 
-        ${bills
+        ${list
           .map(
             (bill, index) => `
           <div class="bill-section">
@@ -250,9 +265,9 @@ export default function HtmlReportProcessor() {
           .join("")}
 
         <div class="grand-total">
-          <div>TOTAL SALES: ₹${bills.reduce((sum, bill) => sum + bill.subTotal, 0).toLocaleString()}</div>
+          <div>TOTAL SALES: ₹${list.reduce((sum, bill) => sum + bill.subTotal, 0).toLocaleString()}</div>
           <div style="font-size: 14px; margin-top: 10px;">
-            Total Bills: ${bills.length} | Total Items: ${bills.reduce((sum, bill) => sum + bill.items.length, 0)}
+            Total Bills: ${list.length} | Total Items: ${list.reduce((sum, bill) => sum + bill.items.length, 0)}
           </div>
         </div>
       </body>
@@ -367,6 +382,25 @@ export default function HtmlReportProcessor() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="space-y-2">
+              <Label>From Date</Label>
+              <Input
+                type="date"
+                value={dateFilter.from}
+                onChange={(e) => setDateFilter((p) => ({ ...p, from: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>To Date</Label>
+              <Input
+                type="date"
+                value={dateFilter.to}
+                onChange={(e) => setDateFilter((p) => ({ ...p, to: e.target.value }))}
+              />
+            </div>
+            <div className="flex items-end"><Button variant="outline" onClick={handleProcessReport}>Apply Filter</Button></div>
+          </div>
           <Tabs defaultValue="header" className="space-y-4">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="header">Header Config</TabsTrigger>
