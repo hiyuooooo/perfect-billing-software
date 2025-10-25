@@ -98,6 +98,7 @@ export default function HtmlReportProcessor() {
   });
 
   const [processedHtml, setProcessedHtml] = useState("");
+  const [filterApplied, setFilterApplied] = useState(false);
 
   // Save header config to localStorage whenever it changes
   useEffect(() => {
