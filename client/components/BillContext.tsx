@@ -513,18 +513,18 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
     }
 
     // If no acceptable match found, create a fallback with minimum requirements
-    if (!bestMatch || bestMatch.items.length < 2) {
+    if (!bestMatch) {
       console.log(
-        "No suitable match found in 200 iterations, creating fallback",
+        `No suitable match found in 200 iterations, creating fallback with minimum ${minItems} items`,
       );
 
       const selectedItems: BillItem[] = [];
       let currentTotal = 0;
 
-      // Sort items by price and take cheapest items to ensure minimum 2 items
+      // Sort items by price and take cheapest items to ensure minimum items requirement
       const sortedItems = availableItems.sort((a, b) => a.price - b.price);
 
-      for (let i = 0; i < Math.min(2, sortedItems.length); i++) {
+      for (let i = 0; i < Math.min(minItems, sortedItems.length); i++) {
         const item = sortedItems[i];
         const billItem: BillItem = {
           id: item.id,
@@ -539,6 +539,34 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
 
       bestMatch = { items: selectedItems, total: currentTotal };
       closestDiff = Math.abs(currentTotal - targetTotal);
+    } else if (bestMatch.items.length < minItems) {
+      // Even if we found a match, ensure it meets minimum items requirement
+      console.log(
+        `Found match with ${bestMatch.items.length} items, but minimum required is ${minItems}. Trying to add more items...`,
+      );
+
+      const remainingItems = availableItems.filter(
+        (item) => !bestMatch.items.some((selected) => selected.id === item.id),
+      );
+
+      const sortedRemaining = remainingItems.sort((a, b) => a.price - b.price);
+
+      for (const item of sortedRemaining) {
+        if (bestMatch.items.length >= minItems) break;
+
+        const billItem: BillItem = {
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: 1,
+          total: item.price,
+        };
+
+        bestMatch.items.push(billItem);
+        bestMatch.total += billItem.total;
+      }
+
+      closestDiff = Math.abs(bestMatch.total - targetTotal);
     }
 
     console.log(
