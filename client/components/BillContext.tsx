@@ -433,8 +433,8 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // If we still don't have 2 items, force add the cheapest available items
-      if (selectedItems.length < 2 && shuffledItems.length >= 2) {
+      // If we still don't have minimum items, force add the cheapest available items
+      if (selectedItems.length < minItems && shuffledItems.length >= minItems) {
         const remainingItems = shuffledItems.filter(
           (item) => !selectedItems.some((selected) => selected.id === item.id),
         );
@@ -444,7 +444,7 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
         );
 
         for (const item of sortedRemaining) {
-          if (selectedItems.length >= 2) break;
+          if (selectedItems.length >= minItems) break;
 
           const billItem: BillItem = {
             id: item.id,
@@ -459,8 +459,8 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // Enforce minimum 2 items per bill rule
-      if (selectedItems.length < 2) {
+      // Enforce minimum items per bill rule
+      if (selectedItems.length < minItems) {
         continue; // Skip this combination, try next iteration
       }
 
