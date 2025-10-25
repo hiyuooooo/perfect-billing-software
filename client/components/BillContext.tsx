@@ -652,9 +652,9 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
         selectedItems = [];
         currentTotal = 0;
 
-        // Get available items with stock
+        // Get available items with stock and price > 0
         const availableForFallback = stockToUse.filter(
-          (item) => item.availableQuantity > 0,
+          (item) => item.availableQuantity > 0 && item.price > 0,
         );
 
         if (availableForFallback.length >= 2) {
