@@ -363,10 +363,21 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
 
       const selectedItems: BillItem[] = [];
       let currentTotal = 0;
-      // Cap number of line items to maximum 7 per bill
-      const maxItems = 7;
 
-      // First, ensure we get at least 2 items by being more lenient
+      // Dynamically determine max items based on target total and randomize
+      let maxItems: number;
+      const minItems: number;
+
+      if (targetTotal < 500) {
+        // For bills < ₹500, allow 1-2 items
+        minItems = 1;
+        maxItems = Math.random() < 0.5 ? 1 : 2;
+      } else {
+        // For bills >= ₹500, randomize between 2-7 items
+        minItems = 2;
+        maxItems = Math.floor(Math.random() * 6) + 2; // Random between 2-7
+      }
+
       let itemsAdded = 0;
       const maxItemsToTry = Math.min(shuffledItems.length, maxItems);
 
