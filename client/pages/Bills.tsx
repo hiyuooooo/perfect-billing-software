@@ -186,10 +186,23 @@ export default function Bills() {
   const saveEditBill = () => {
     if (!editingBill) return;
 
+    // Filter out items with 0 price
+    const validItems = editItems.filter((item) => item.price > 0);
+
+    if (validItems.length === 0) {
+      alert("No valid items with price > 0. Please add items with prices.");
+      return;
+    }
+
+    if (validItems.length < editItems.length) {
+      const removedCount = editItems.length - validItems.length;
+      alert(`${removedCount} item(s) with 0 price have been excluded from the bill.`);
+    }
+
     const updatedBill = {
       ...editingBill,
-      items: editItems,
-      subTotal: editItems.reduce((sum, item) => sum + item.total, 0),
+      items: validItems,
+      subTotal: validItems.reduce((sum, item) => sum + item.total, 0),
     };
 
     updateBill(editingBill.id, updatedBill, {
