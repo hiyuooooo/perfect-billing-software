@@ -366,7 +366,7 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
 
       // Dynamically determine max items based on target total and randomize
       let maxItems: number;
-      const minItems: number;
+      let minItems: number;
 
       if (targetTotal < 500) {
         // For bills < ₹500, allow 1-2 items
