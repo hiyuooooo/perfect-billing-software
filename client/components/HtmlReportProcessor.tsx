@@ -124,6 +124,11 @@ export default function HtmlReportProcessor() {
     }
   }, [footerConfig, activeAccount]);
 
+  // Reset filter applied status when date filter changes
+  useEffect(() => {
+    setFilterApplied(false);
+  }, [dateFilter]);
+
   // Load settings when account changes
   useEffect(() => {
     if (activeAccount) {
