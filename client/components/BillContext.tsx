@@ -569,11 +569,11 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
     const generatedBills: Bill[] = [];
     let currentBillNumber = startingBillNumber;
 
-    // Use provided stock or fallback to mock data, ensure only items with available quantity > 0
+    // Use provided stock or fallback to mock data, ensure only items with available quantity > 0 and price > 0
     const stockToUse =
       availableStock.length > 0
         ? availableStock
-            .filter((item) => item.availableQuantity > 0)
+            .filter((item) => item.availableQuantity > 0 && ((item as any).mrp ?? (item as any).price) > 0)
             .map((item) => ({
               id: (item as any).id,
               name: (item as any).itemName,
