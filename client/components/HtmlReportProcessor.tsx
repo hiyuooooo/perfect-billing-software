@@ -174,20 +174,45 @@ export default function HtmlReportProcessor() {
   };
 
   const generateBaseHtmlReport = (): string => {
-    const list = bills.filter((bill) => {
-      if (!dateFilter.from && !dateFilter.to) return true;
-      const billDate = new Date(bill.date.split("-").reverse().join("-"));
-      if (dateFilter.from) {
-        const from = new Date(dateFilter.from);
-        if (billDate < from) return false;
+    let list = bills;
+    let lowestBillNumber = undefined;
+    let highestBillNumber = undefined;
+
+    // If from date is specified, find lowest bill number on that date
+    if (dateFilter.from) {
+      const fromDate = new Date(dateFilter.from);
+      const billsOnFromDate = bills.filter((bill) => {
+        const billDate = new Date(bill.date.split("-").reverse().join("-"));
+        return billDate.toDateString() === fromDate.toDateString();
+      });
+      if (billsOnFromDate.length > 0) {
+        lowestBillNumber = Math.min(...billsOnFromDate.map((b) => b.billNumber));
       }
-      if (dateFilter.to) {
-        const to = new Date(dateFilter.to);
-        to.setHours(23, 59, 59, 999);
-        if (billDate > to) return false;
+    }
+
+    // If to date is specified, find highest bill number on that date
+    if (dateFilter.to) {
+      const toDate = new Date(dateFilter.to);
+      const billsOnToDate = bills.filter((bill) => {
+        const billDate = new Date(bill.date.split("-").reverse().join("-"));
+        return billDate.toDateString() === toDate.toDateString();
+      });
+      if (billsOnToDate.length > 0) {
+        highestBillNumber = Math.max(...billsOnToDate.map((b) => b.billNumber));
       }
+    }
+
+    // Filter bills by bill number range and sort by bill number
+    list = bills.filter((bill) => {
+      if (lowestBillNumber !== undefined && bill.billNumber < lowestBillNumber)
+        return false;
+      if (highestBillNumber !== undefined && bill.billNumber > highestBillNumber)
+        return false;
       return true;
     });
+
+    // Sort by bill number ascending
+    list.sort((a, b) => a.billNumber - b.billNumber);
     return `
       <!DOCTYPE html>
       <html>
