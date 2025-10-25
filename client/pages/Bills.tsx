@@ -603,10 +603,22 @@ export default function Bills() {
 
       const selectedItems: BillItem[] = [];
       let currentTotal = 0;
-      // Cap number of items to maximum 7 per bill
-      const maxItems = 7;
 
-      // First, ensure we get at least 2 items by being more lenient
+      // Dynamically determine max items based on target total and randomize
+      let maxItems: number;
+      const minItems: number;
+
+      if (targetTotal < 500) {
+        // For bills < ₹500, allow 1-2 items
+        minItems = 1;
+        maxItems = Math.random() < 0.5 ? 1 : 2;
+      } else {
+        // For bills >= ₹500, randomize between 2-7 items
+        minItems = 2;
+        maxItems = Math.floor(Math.random() * 6) + 2; // Random between 2-7
+      }
+
+      // First, try to select items based on target
       for (
         let itemIndex = 0;
         itemIndex < shuffledItems.length && selectedItems.length < maxItems;
@@ -622,9 +634,9 @@ export default function Bills() {
           const itemCost = item.price * qty;
           const newTotal = currentTotal + itemCost;
 
-          // Be more lenient for the first 2 items to ensure minimum requirement
+          // Be more lenient for items before we reach minimum items
           const currentTolerance =
-            selectedItems.length < 2 ? tolerance * 2 : tolerance;
+            selectedItems.length < minItems ? tolerance * 2 : tolerance;
 
           // Check if this addition keeps us within bounds
           if (newTotal <= targetTotal + currentTolerance) {
