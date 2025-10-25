@@ -529,14 +529,15 @@ export default function Bills() {
     console.log("Starting 200-iteration algorithm for target:", targetTotal);
 
     // Get available items that aren't in previous bill to avoid repetition
+    // Also exclude items with 0 price
     let availableItems = stockToUse.filter(
       (item) =>
-        !previousItems.includes(item.name) && item.availableQuantity > 0,
+        !previousItems.includes(item.name) && item.availableQuantity > 0 && item.price > 0,
     );
 
     if (availableItems.length < 2) {
-      // If not enough unique items available, use all available items with stock
-      availableItems = stockToUse.filter((item) => item.availableQuantity > 0);
+      // If not enough unique items available, use all available items with stock and price > 0
+      availableItems = stockToUse.filter((item) => item.availableQuantity > 0 && item.price > 0);
       console.log(
         `Not enough unique items, using all available items with stock: ${availableItems.length}`,
       );
