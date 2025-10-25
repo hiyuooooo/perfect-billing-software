@@ -577,6 +577,16 @@ export default function Bills() {
       );
     }
 
+    // Compute minimum items requirement upfront (same for all iterations)
+    let minItems: number;
+    if (targetTotal < 500) {
+      // For bills < ₹500, allow 1-2 items
+      minItems = 1;
+    } else {
+      // For bills >= ₹500, allow 2+ items
+      minItems = 2;
+    }
+
     // Complete 200 iterations to find the best combination
     for (let attempt = 0; attempt < 200; attempt++) {
       iterationsPerformed++;
@@ -604,17 +614,13 @@ export default function Bills() {
       const selectedItems: BillItem[] = [];
       let currentTotal = 0;
 
-      // Dynamically determine max items based on target total and randomize
+      // Randomize max items within the iteration (for variety)
       let maxItems: number;
-      const minItems: number;
-
       if (targetTotal < 500) {
         // For bills < ₹500, allow 1-2 items
-        minItems = 1;
         maxItems = Math.random() < 0.5 ? 1 : 2;
       } else {
         // For bills >= ₹500, randomize between 2-7 items
-        minItems = 2;
         maxItems = Math.floor(Math.random() * 6) + 2; // Random between 2-7
       }
 
