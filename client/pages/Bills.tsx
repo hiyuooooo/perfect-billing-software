@@ -220,6 +220,10 @@ export default function Bills() {
       prev.map((item, i) => {
         if (i === index) {
           const updated = { ...item, [field]: value };
+          if (field === "price") {
+            // Ensure price is not 0
+            updated.price = Math.max(parseFloat(value) || item.price, 0.01);
+          }
           if (field === "price" || field === "quantity") {
             updated.total = updated.price * updated.quantity;
           }
@@ -3426,7 +3430,7 @@ export default function Bills() {
                                 Total:
                               </td>
                               <td className="p-3">
-                                ₹
+                                ���
                                 {selectedItems.reduce(
                                   (sum, item) => sum + item.total,
                                   0,
