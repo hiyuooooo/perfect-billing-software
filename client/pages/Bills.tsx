@@ -258,6 +258,13 @@ export default function Bills() {
       ? parseFloat(itemToAdd.customPrice)
       : base;
     const price = clampToPriceBand(stockItem.id, isNaN(desired) ? base : desired);
+
+    // Validate that price is greater than 0
+    if (price <= 0) {
+      alert("Item price must be greater than 0.");
+      return;
+    }
+
     const total = price * itemToAdd.quantity;
 
     const newItem: BillItem = {
