@@ -426,7 +426,18 @@ export default function HtmlReportProcessor() {
                 onChange={(e) => setDateFilter((p) => ({ ...p, to: e.target.value }))}
               />
             </div>
-            <div className="flex items-end"><Button variant="outline" onClick={handleProcessReport}>Apply Filter</Button></div>
+            <div className="flex items-end">
+              <Button
+                onClick={handleProcessReport}
+                className={
+                  filterApplied
+                    ? "bg-green-600 hover:bg-green-700 text-white"
+                    : ""
+                }
+              >
+                Apply Filter
+              </Button>
+            </div>
           </div>
           <Tabs defaultValue="header" className="space-y-4">
             <TabsList className="grid w-full grid-cols-4">
