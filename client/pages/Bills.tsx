@@ -291,7 +291,8 @@ export default function Bills() {
           if (field === "price") {
             const numeric = parseFloat(value);
             const clamped = clampToPriceBand(item.id, isNaN(numeric) ? item.price : numeric);
-            updated.price = clamped;
+            // Ensure price is not 0
+            updated.price = Math.max(clamped, 0.01);
           } else if (field === "quantity") {
             updated.quantity = value;
           } else {
