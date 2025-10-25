@@ -1082,7 +1082,20 @@ export default function Bills() {
       return;
     }
 
-    const summary = selectedItems.map((i) => `• ${i.name} x ${i.quantity}`).join("\n");
+    // Filter out items with 0 price
+    const validItems = selectedItems.filter((item) => item.price > 0);
+
+    if (validItems.length === 0) {
+      alert("No valid items with price > 0. Please add items with prices.");
+      return;
+    }
+
+    if (validItems.length < selectedItems.length) {
+      const removedCount = selectedItems.length - validItems.length;
+      alert(`${removedCount} item(s) with 0 price have been excluded from the bill.`);
+    }
+
+    const summary = validItems.map((i) => `• ${i.name} x ${i.quantity}`).join("\n");
     const proceed = confirm(
       `This will deduct stock for:\n\n${summary}\n\nProceed to create bill and update stock?`,
     );
@@ -1095,7 +1108,7 @@ export default function Bills() {
     const billNumber = parseInt(newBill.billNumber) || maxExisting + 1;
 
     const targetTotal = parseFloat(newBill.targetTotal) || 0;
-    const generatedTotal = selectedItems.reduce(
+    const generatedTotal = validItems.reduce(
       (sum, item) => sum + item.total,
       0,
     );
@@ -1105,7 +1118,7 @@ export default function Bills() {
       billNumber: billNumber,
       date: new Date(newBill.date).toLocaleDateString("en-GB"),
       customerName: displayName,
-      items: selectedItems,
+      items: validItems,
       subTotal: generatedTotal, // Actual generated total
       expectedTotal: targetTotal > 0 ? targetTotal : generatedTotal, // Expected = target if provided
       paymentMode,
@@ -1126,7 +1139,7 @@ export default function Bills() {
     addBill(bill);
 
     // Update stock quantities
-    selectedItems.forEach((billItem) => {
+    validItems.forEach((billItem) => {
       const success = reduceStock(billItem.id, billItem.quantity);
       if (!success) {
         console.warn(`Failed to reduce stock for ${billItem.name}`);
