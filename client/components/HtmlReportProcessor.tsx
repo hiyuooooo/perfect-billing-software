@@ -313,6 +313,7 @@ export default function HtmlReportProcessor() {
       const baseHtml = generateBaseHtmlReport();
       const processed = processHtmlContent(baseHtml);
       setProcessedHtml(processed);
+      setFilterApplied(true);
 
       console.log("HTML report processed successfully!");
     } catch (error) {
