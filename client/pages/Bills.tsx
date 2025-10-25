@@ -779,14 +779,15 @@ export default function Bills() {
     );
 
     // Build available items using MRP when available and avoid previous items
+    // Also exclude items with 0 price
     let baseItems = stockItems.filter(
       (item) =>
-        item.availableQuantity > 0 && !previousItems.includes(item.itemName),
+        item.availableQuantity > 0 && !previousItems.includes(item.itemName) && (item.price > 0 || (item as any).mrp > 0),
     );
 
     if (baseItems.length < 2) {
-      // If not enough unique items available, use all available items
-      baseItems = stockItems.filter((item) => item.availableQuantity > 0);
+      // If not enough unique items available, use all available items with price > 0
+      baseItems = stockItems.filter((item) => item.availableQuantity > 0 && (item.price > 0 || (item as any).mrp > 0));
     }
 
     // Normalize to a local shape using unitPrice = mrp || price
