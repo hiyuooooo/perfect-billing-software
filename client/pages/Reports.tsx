@@ -1229,6 +1229,19 @@ export default function Reports() {
                                 </Button>
                                 <Button
                                   size="sm"
+                                  variant="destructive"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (confirm(`Remove bill #${bill.billNumber} from mismatch report? Stock will be restored.`)) {
+                                      deleteBill(bill.id, { restoreStock: true });
+                                    }
+                                  }}
+                                  title="Remove from mismatch report"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     sendToBills(bill, false);
