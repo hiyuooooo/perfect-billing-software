@@ -324,18 +324,22 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
     const tolerance = 20; // Final difference tolerance ±20
     let iterationsPerformed = 0;
 
-    // Dynamically determine max items based on target total and randomize
+    // Dynamically determine max items based on target total
     let maxItems: number;
     let minItems: number;
 
-    if (targetTotal < 500) {
-      // For bills < ₹500, allow 1-2 items
+    if (targetTotal < 100) {
+      // For bills < ₹100, use 1 item
       minItems = 1;
-      maxItems = Math.random() < 0.5 ? 1 : 2;
-    } else {
-      // For bills >= ₹500, randomize between 2-7 items
+      maxItems = 1;
+    } else if (targetTotal <= 9000) {
+      // For bills ₹100-₹9000, allow 2-7 items
       minItems = 2;
       maxItems = Math.floor(Math.random() * 6) + 2; // Random between 2-7
+    } else {
+      // For bills > ₹9000, allow up to 8-10 items
+      minItems = 3;
+      maxItems = Math.floor(Math.random() * 3) + 8; // Random between 8-10
     }
 
     // Start iteration monitoring if bill number provided
