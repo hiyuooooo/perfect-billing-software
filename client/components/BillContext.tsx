@@ -829,7 +829,7 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
     return bestMatch;
   };
 
-  const generateBillsFromTransactions = (
+  const generateBillsFromTransactions = async (
     transactions: any[],
     startingBillNumber: number,
     blockedNumbers: number[],
