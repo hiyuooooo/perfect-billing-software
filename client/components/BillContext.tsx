@@ -493,13 +493,13 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
       iterationMonitor.logIteration(
         monitorId,
         0,
-        `Starting 200 iterations for bill ${billNumber} with target ₹${targetTotal}`,
+        `Starting 100,000 iterations for bill ${billNumber} with target ₹${targetTotal}`,
         "info",
       );
     }
 
-    // Complete 200 iterations to find the best combination
-    for (let attempt = 0; attempt < 200; attempt++) {
+    // Complete 100,000 iterations to find the best combination
+    for (let attempt = 0; attempt < 100000; attempt++) {
       iterationsPerformed++;
 
       // Log iteration progress
@@ -644,7 +644,7 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
           });
         }
 
-        // Continue all 200 iterations to find the absolute best match
+        // Continue all 100,000 iterations to find the absolute best match
         if (finalDiff === 0) {
           console.log(
             `Found perfect match on iteration ${attempt + 1}, continuing for optimization...`,
@@ -781,8 +781,8 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
       });
       iterationMonitor.logIteration(
         monitorId,
-        200,
-        `Completed all 200 iterations. Final result: ${bestMatch.items.length} items, total: ₹${bestMatch.total}, difference: ₹${closestDiff}`,
+        100000,
+        `Completed all 100,000 iterations. Final result: ${bestMatch.items.length} items, total: ₹${bestMatch.total}, difference: ₹${closestDiff}`,
         "success",
       );
     }
