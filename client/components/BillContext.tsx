@@ -982,11 +982,11 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
         customerName: transaction.customerName,
         items: selectedItems,
         subTotal: currentTotal,
-        expectedTotal: targetTotal, // Expected should be the transaction's target total
+        expectedTotal: targetTotal,
         paymentMode: transaction.paymentMode,
-        status: "generated",
-        difference: targetTotal - currentTotal, // Positive => Under, Negative => Over
-        tolerance: difference,
+        status: finalDifference <= 20 ? "generated" : "needs_review",
+        difference: targetTotal - currentTotal,
+        tolerance: finalDifference,
         headerInfo: {
           agencyName: "Sadhana Agency",
           address: "Harsila (Dewalchaura), Bageshwar, Uttarakhand",
