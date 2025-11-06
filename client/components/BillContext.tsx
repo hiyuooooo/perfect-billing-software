@@ -423,8 +423,13 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
     return { items: adjustedItems, total: currentTotal };
   };
 
+  // Helper function to yield control to browser periodically
+  const yieldToUI = (): Promise<void> => {
+    return new Promise((resolve) => setTimeout(resolve, 0));
+  };
+
   // Enhanced 100,000-iteration algorithm following Python bill generation rules
-  const generateOptimalBillItems = (
+  const generateOptimalBillItems = async (
     targetTotal: number,
     stockToUse: any[],
     previousItems: string[] = [],
