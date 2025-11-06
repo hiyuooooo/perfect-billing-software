@@ -1273,7 +1273,7 @@ export default function Transactions() {
                   Cancel
                 </Button>
                 <Button
-                  onClick={() => {
+                  onClick={async () => {
                     const selectedTransactions = getSelectedTransactions();
                     if (selectedTransactions.length === 0) {
                       alert(
@@ -1290,7 +1290,7 @@ export default function Transactions() {
                           .filter((n) => !isNaN(n))
                       : [];
 
-                    const generatedBills = generateBillsFromTransactions(
+                    const generatedBills = await generateBillsFromTransactions(
                       selectedTransactions,
                       startBillNum,
                       blockedNumbers,
