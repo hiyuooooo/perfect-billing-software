@@ -511,14 +511,18 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
     for (let attempt = 0; attempt < 100000; attempt++) {
       iterationsPerformed++;
 
-      // Log iteration progress
-      if (monitorId && iterationMonitor) {
-        iterationMonitor.logIteration(
-          monitorId,
-          attempt + 1,
-          `Iteration ${attempt + 1}/100,000: Trying new combination...`,
-          "info",
-        );
+      // Yield to UI every 500 iterations to keep page responsive
+      if (attempt % 500 === 0 && attempt > 0) {
+        await yieldToUI();
+      }
+
+      // Log iteration progress every 10,000 iterations to avoid spam
+      if (attempt % 10000 === 0) {
+        if (monitorId && iterationMonitor) {
+          iterationMonitor.updateIteration(monitorId, {
+            currentIteration: attempt + 1,
+          });
+        }
       }
 
       // Shuffle items randomly each iteration with price preference for higher targets
