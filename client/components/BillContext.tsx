@@ -870,7 +870,7 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
       let selectedItems: BillItem[] = [];
       let currentTotal = 0;
       let generationAttempt = 0;
-      const maxGenerationAttempts = 5; // Try up to 5 times per bill
+      const maxGenerationAttempts = 10; // Try up to 10 times per bill (each with 100,000 iterations)
       let billIsPerfect = false;
 
       while (!billIsPerfect && generationAttempt < maxGenerationAttempts) {
