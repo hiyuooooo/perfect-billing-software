@@ -863,19 +863,46 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
       }
 
       console.log(
-        `Generating bill for transaction ${index + 1}/${transactions.length}: target ${targetTotal}`,
+        `Generating bill ${index + 1}/${transactions.length} (Bill #${currentBillNumber}): target ₹${targetTotal}`,
       );
 
-      // Generate bill items using enhanced algorithm
-      const result = generateOptimalBillItems(
-        targetTotal,
-        stockToUse,
-        previousBillItems,
-        currentBillNumber,
-      );
+      // Sequential generation: Keep trying until bill is perfect (within tolerance)
+      let selectedItems: BillItem[] = [];
+      let currentTotal = 0;
+      let generationAttempt = 0;
+      const maxGenerationAttempts = 5; // Try up to 5 times per bill
+      let billIsPerfect = false;
 
-      let selectedItems = result.items;
-      let currentTotal = result.total;
+      while (!billIsPerfect && generationAttempt < maxGenerationAttempts) {
+        generationAttempt++;
+        console.log(
+          `Bill #${currentBillNumber} - Generation attempt ${generationAttempt}/${maxGenerationAttempts}`,
+        );
+
+        // Generate bill items using enhanced algorithm
+        const result = generateOptimalBillItems(
+          targetTotal,
+          stockToUse,
+          previousBillItems,
+          currentBillNumber,
+        );
+
+        selectedItems = result.items;
+        currentTotal = result.total;
+
+        // Check if within tolerance
+        const difference = Math.abs(currentTotal - targetTotal);
+        if (difference <= 20) {
+          billIsPerfect = true;
+          console.log(
+            `✓ Bill #${currentBillNumber} is PERFECT: ₹${currentTotal} (target ₹${targetTotal}, difference ±${difference})`,
+          );
+        } else {
+          console.log(
+            `Bill #${currentBillNumber} needs adjustment: ₹${currentTotal} (target ₹${targetTotal}, difference ±${difference})`,
+          );
+        }
+      }
 
       // If no items generated, create fallback ensuring minimum 2 items
       if (selectedItems.length === 0) {
