@@ -286,6 +286,143 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
     setBills([]);
   };
 
+  // Function to adjust bill after initial generation to match exact target
+  const adjustBillToMatchTarget = (
+    initialBill: { items: BillItem[]; total: number },
+    targetTotal: number,
+    availableItems: any[],
+  ): { items: BillItem[]; total: number } | null => {
+    let adjustedItems = [...initialBill.items];
+    let currentTotal = initialBill.total;
+    const difference = targetTotal - currentTotal;
+
+    // If already matching or very close, return as is
+    if (Math.abs(difference) <= 0) {
+      return initialBill;
+    }
+
+    console.log(
+      `Adjusting bill: Current ₹${currentTotal}, Target ₹${targetTotal}, Difference ₹${difference}`,
+    );
+
+    // Case 1: Total is LESS than target - ADD items to increase
+    if (difference > 0) {
+      console.log(`Under target by ���${difference}, adding items...`);
+
+      // Get available items not already in bill
+      const unusedItems = availableItems.filter(
+        (item) => !adjustedItems.some((selected) => selected.id === item.id),
+      );
+
+      // Sort by price for flexibility
+      const sortedUnused = unusedItems.sort((a, b) => a.price - b.price);
+
+      for (const item of sortedUnused) {
+        if (currentTotal >= targetTotal) break; // Stop if we've reached target
+
+        // Calculate how many units we need
+        const remainingDifference = targetTotal - currentTotal;
+        let qtyToAdd = Math.ceil(remainingDifference / item.price);
+
+        // Don't exceed available quantity
+        qtyToAdd = Math.min(qtyToAdd, item.availableQuantity);
+
+        if (qtyToAdd > 0) {
+          const itemCost = item.price * qtyToAdd;
+
+          // Check if adding this item overshoots too much
+          if (currentTotal + itemCost <= targetTotal + 20) {
+            // Allow up to ₹20 overshoot
+            const billItem: BillItem = {
+              id: item.id,
+              name: item.name,
+              price: item.price,
+              quantity: qtyToAdd,
+              total: itemCost,
+            };
+
+            adjustedItems.push(billItem);
+            currentTotal += itemCost;
+            console.log(
+              `Added ${item.name} (qty: ${qtyToAdd}) for ₹${itemCost}, total now ₹${currentTotal}`,
+            );
+          } else {
+            // Try adding just 1 unit if it doesn't overshoot too much
+            const singleItemCost = item.price;
+            if (currentTotal + singleItemCost <= targetTotal + 20) {
+              const billItem: BillItem = {
+                id: item.id,
+                name: item.name,
+                price: item.price,
+                quantity: 1,
+                total: singleItemCost,
+              };
+
+              adjustedItems.push(billItem);
+              currentTotal += singleItemCost;
+              console.log(
+                `Added ${item.name} (qty: 1) for ₹${singleItemCost}, total now ₹${currentTotal}`,
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // Case 2: Total is MORE than target - REDUCE or REMOVE items
+    else if (difference < 0) {
+      console.log(
+        `Over target by ₹${Math.abs(difference)}, removing/reducing items...`,
+      );
+
+      const amountToRemove = Math.abs(difference);
+
+      // Try to reduce quantities first
+      for (let i = adjustedItems.length - 1; i >= 0; i--) {
+        if (currentTotal <= targetTotal) break;
+
+        const item = adjustedItems[i];
+        const remainingOverage = currentTotal - targetTotal;
+
+        // Option 1: Remove the entire item if it fits
+        if (currentTotal - item.total >= targetTotal - 20) {
+          // Allow up to ₹20 undershoot
+          currentTotal -= item.total;
+          adjustedItems.splice(i, 1);
+          console.log(
+            `Removed entire item: ${item.name} (qty: ${item.quantity}), total now ₹${currentTotal}`,
+          );
+        }
+        // Option 2: Reduce quantity
+        else if (item.quantity > 1) {
+          const qtyToRemove = Math.ceil(remainingOverage / item.price);
+          const actualQtyToRemove = Math.min(qtyToRemove, item.quantity - 1); // Keep at least 1 unit
+
+          if (actualQtyToRemove > 0) {
+            const removedCost = item.price * actualQtyToRemove;
+            item.quantity -= actualQtyToRemove;
+            item.total -= removedCost;
+            currentTotal -= removedCost;
+            console.log(
+              `Reduced ${item.name} by ${actualQtyToRemove} units, total now ₹${currentTotal}`,
+            );
+          }
+        }
+      }
+    }
+
+    // Ensure we still have minimum items
+    if (adjustedItems.length === 0) {
+      console.log("Adjustment resulted in no items, returning initial bill");
+      return initialBill;
+    }
+
+    console.log(
+      `Adjustment complete: ${adjustedItems.length} items, final total ₹${currentTotal}`,
+    );
+    return { items: adjustedItems, total: currentTotal };
+  };
+
   // Enhanced 200-iteration algorithm following Python bill generation rules
   const generateOptimalBillItems = (
     targetTotal: number,
