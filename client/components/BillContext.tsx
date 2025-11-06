@@ -324,6 +324,20 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
     const tolerance = 20; // Final difference tolerance ±20
     let iterationsPerformed = 0;
 
+    // Dynamically determine max items based on target total and randomize
+    let maxItems: number;
+    let minItems: number;
+
+    if (targetTotal < 500) {
+      // For bills < ₹500, allow 1-2 items
+      minItems = 1;
+      maxItems = Math.random() < 0.5 ? 1 : 2;
+    } else {
+      // For bills >= ₹500, randomize between 2-7 items
+      minItems = 2;
+      maxItems = Math.floor(Math.random() * 6) + 2; // Random between 2-7
+    }
+
     // Start iteration monitoring if bill number provided
     let monitorId: string | null = null;
     if (billNumber && iterationMonitor) {
@@ -363,20 +377,6 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
 
       const selectedItems: BillItem[] = [];
       let currentTotal = 0;
-
-      // Dynamically determine max items based on target total and randomize
-      let maxItems: number;
-      let minItems: number;
-
-      if (targetTotal < 500) {
-        // For bills < ₹500, allow 1-2 items
-        minItems = 1;
-        maxItems = Math.random() < 0.5 ? 1 : 2;
-      } else {
-        // For bills >= ₹500, randomize between 2-7 items
-        minItems = 2;
-        maxItems = Math.floor(Math.random() * 6) + 2; // Random between 2-7
-      }
 
       let itemsAdded = 0;
       const maxItemsToTry = Math.min(shuffledItems.length, maxItems);
