@@ -469,14 +469,20 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
       // For bills < ₹100, use 1 item
       minItems = 1;
       maxItems = 1;
-    } else if (targetTotal <= 9000) {
-      // For bills ₹100-₹9000, allow 2-7 items
+    } else if (targetTotal < 5000) {
+      // For bills ₹100-₹5000, allow 2-7 items
       minItems = 2;
       maxItems = Math.floor(Math.random() * 6) + 2; // Random between 2-7
+    } else if (targetTotal <= 9000) {
+      // For bills ₹5000-₹9000, minimum 5 items, increase based on amount
+      minItems = 5;
+      const itemsForAmount = Math.ceil(targetTotal / 1000) + 2; // 1 item per ₹1000 + 2
+      maxItems = Math.min(itemsForAmount, 10); // Cap at 10
     } else {
-      // For bills > ₹9000, allow up to 8-10 items
-      minItems = 3;
-      maxItems = Math.floor(Math.random() * 3) + 8; // Random between 8-10
+      // For bills > ₹9000, minimum 5 items, increase based on amount
+      minItems = 5;
+      const itemsForAmount = Math.ceil(targetTotal / 1000) + 3; // 1 item per ₹1000 + 3
+      maxItems = Math.min(itemsForAmount, 15); // Cap at 15
     }
 
     // Start iteration monitoring if bill number provided
