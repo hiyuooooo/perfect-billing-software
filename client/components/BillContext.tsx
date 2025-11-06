@@ -512,8 +512,22 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
         );
       }
 
-      // Shuffle items randomly each iteration (equivalent to pandas sample(frac=1))
+      // Shuffle items randomly each iteration with price preference for higher targets
       const shuffledItems = [...availableItems];
+
+      // For higher transaction totals, prefer higher-priced items
+      if (targetTotal > 5000) {
+        // Sort by price descending for high-value transactions
+        shuffledItems.sort((a, b) => b.price - a.price);
+      } else if (targetTotal > 500) {
+        // For medium transactions, slight preference for higher prices but still randomize
+        shuffledItems.sort(() => Math.random() - 0.5);
+      } else {
+        // For small transactions, randomize freely
+        shuffledItems.sort(() => Math.random() - 0.5);
+      }
+
+      // Apply additional random shuffle to avoid too predictable patterns
       for (let i = shuffledItems.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [shuffledItems[i], shuffledItems[j]] = [
