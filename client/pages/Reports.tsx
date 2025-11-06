@@ -26,7 +26,7 @@ import {
   Code,
   Wand2,
 } from "lucide-react";
-import { Copy, Send } from "lucide-react";
+import { Copy, Send, X } from "lucide-react";
 import { Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import * as XLSX from "xlsx";
