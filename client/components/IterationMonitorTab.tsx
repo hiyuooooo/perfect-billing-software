@@ -144,6 +144,103 @@ export function IterationMonitorTab() {
         </Card>
       </div>
 
+      {currentIterations.length > 0 && (
+        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200">
+          <CardHeader>
+            <CardTitle className="text-center text-2xl">
+              📊 Bill Generation in Progress
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {currentIterations.map((iteration) => (
+              <div
+                key={iteration.id}
+                className="bg-white p-6 rounded-lg border-2 border-blue-300 shadow-sm"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Current Bill
+                    </p>
+                    <h3 className="text-4xl font-bold text-blue-600">
+                      Bill #{iteration.billNumber}
+                    </h3>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-muted-foreground mb-1">Target</p>
+                    <p className="text-3xl font-bold text-green-600">
+                      ₹{iteration.targetTotal.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-gray-100 p-4 rounded-lg mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-lg font-semibold">
+                      Iterations: {(iteration.currentIteration / 1000).toFixed(1)}K / 100K
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      {((iteration.currentIteration / 100000) * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                  <Progress
+                    value={(iteration.currentIteration / 100000) * 100}
+                    className="h-3"
+                  />
+                </div>
+
+                {iteration.bestMatch && (
+                  <div className="grid grid-cols-4 gap-3">
+                    <div className="bg-blue-50 p-3 rounded">
+                      <p className="text-xs text-muted-foreground">Best Total</p>
+                      <p className="text-xl font-bold">
+                        ₹{iteration.bestMatch.total.toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="bg-purple-50 p-3 rounded">
+                      <p className="text-xs text-muted-foreground">Items</p>
+                      <p className="text-xl font-bold">
+                        {iteration.bestMatch.items.length}
+                      </p>
+                    </div>
+                    <div
+                      className={cn(
+                        "p-3 rounded",
+                        iteration.bestMatch.difference === 0
+                          ? "bg-green-50"
+                          : "bg-orange-50",
+                      )}
+                    >
+                      <p className="text-xs text-muted-foreground">Difference</p>
+                      <p
+                        className={cn(
+                          "text-xl font-bold",
+                          iteration.bestMatch.difference === 0
+                            ? "text-green-600"
+                            : iteration.bestMatch.difference <= 20
+                              ? "text-orange-600"
+                              : "text-red-600",
+                        )}
+                      >
+                        {iteration.bestMatch.difference === 0
+                          ? "✓ PERFECT"
+                          : `±₹${iteration.bestMatch.difference}`}
+                      </p>
+                    </div>
+                    <div className="bg-indigo-50 p-3 rounded">
+                      <p className="text-xs text-muted-foreground">Duration</p>
+                      <p className="text-xl font-bold">
+                        {formatDuration(iteration.startTime).replace("ms", "")}ms
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       <Tabs defaultValue="active" className="space-y-4">
         <TabsList>
           <TabsTrigger value="active">
