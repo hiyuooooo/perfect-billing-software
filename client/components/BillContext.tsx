@@ -904,9 +904,11 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // If no items generated, create fallback ensuring minimum 2 items
+      // If no items generated, create fallback
       if (selectedItems.length === 0) {
-        console.warn("No items generated, using fallback with minimum 2 items");
+        console.warn(
+          `Bill #${currentBillNumber}: No items generated, using fallback`,
+        );
         selectedItems = [];
         currentTotal = 0;
 
@@ -916,7 +918,7 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
         );
 
         if (availableForFallback.length >= 2) {
-          // Sort by price and take 2 cheapest items
+          // Sort by price and take cheapest items to meet minimum requirement
           const sortedItems = availableForFallback.sort(
             (a, b) => a.price - b.price,
           );
@@ -934,7 +936,6 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
             currentTotal += billItem.total;
           }
         } else if (availableForFallback.length === 1) {
-          // Only one item available, use it with quantity up to 5 if possible
           const item = availableForFallback[0];
           const maxQty = Math.min(5, item.availableQuantity);
           selectedItems = [
@@ -950,62 +951,26 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // Check tolerance constraint (±20)
-      const difference = Math.abs(currentTotal - targetTotal);
-      if (difference > 20) {
-        console.warn(
-          `Bill ${currentBillNumber} exceeds ±5 tolerance: difference ${difference}`,
-        );
+      // Final check and adjustment if still not perfect
+      let finalDifference = Math.abs(currentTotal - targetTotal);
+      if (finalDifference > 20) {
         console.log(
-          "Target:",
-          targetTotal,
-          "Generated:",
-          currentTotal,
-          "Items:",
-          selectedItems.length,
+          `Bill #${currentBillNumber} still needs adjustment: difference ±${finalDifference}`,
         );
 
-        // Try multiple retries with different approaches if tolerance exceeded
-        let bestRetryResult = { items: selectedItems, total: currentTotal };
-        let bestRetryDiff = difference;
-
-        // Retry 1: Don't avoid previous items
-        const retryResult1 = generateOptimalBillItems(
+        // Use the adjustment function as final resort
+        const adjustmentResult = adjustBillToMatchTarget(
+          { items: selectedItems, total: currentTotal },
           targetTotal,
           stockToUse,
-          [], // Don't avoid previous items on retry
         );
-        const retry1Diff = Math.abs(retryResult1.total - targetTotal);
-        if (retry1Diff < bestRetryDiff) {
-          bestRetryResult = retryResult1;
-          bestRetryDiff = retry1Diff;
-        }
 
-        // Retry 2: Use only high-value items for large targets
-        if (targetTotal > 300) {
-          const highValueItems = stockToUse.filter(
-            (item) => item.price > 50 && item.availableQuantity > 0,
-          );
-          if (highValueItems.length >= 2) {
-            const retryResult2 = generateOptimalBillItems(
-              targetTotal,
-              highValueItems,
-              [],
-            );
-            const retry2Diff = Math.abs(retryResult2.total - targetTotal);
-            if (retry2Diff < bestRetryDiff) {
-              bestRetryResult = retryResult2;
-              bestRetryDiff = retry2Diff;
-            }
-          }
-        }
-
-        // Use the best retry result
-        if (bestRetryDiff < difference) {
-          selectedItems = bestRetryResult.items;
-          currentTotal = bestRetryResult.total;
+        if (adjustmentResult && adjustmentResult.total !== currentTotal) {
+          selectedItems = adjustmentResult.items;
+          currentTotal = adjustmentResult.total;
+          finalDifference = Math.abs(currentTotal - targetTotal);
           console.log(
-            `Retry improved result: ${bestRetryResult.total} (diff: ${bestRetryDiff})`,
+            `Bill #${currentBillNumber} after adjustment: ₹${currentTotal} (difference ±${finalDifference})`,
           );
         }
       }
