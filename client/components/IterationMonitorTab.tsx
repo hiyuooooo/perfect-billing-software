@@ -196,14 +196,16 @@ export function IterationMonitorTab() {
                     <div className="space-y-3">
                       <div className="flex justify-between text-sm">
                         <span>Progress</span>
-                        <span>{iteration.currentIteration}/200 iterations</span>
+                        <span className="font-semibold text-blue-600">
+                          {(iteration.currentIteration / 1000).toFixed(1)}K / 100K iterations
+                        </span>
                       </div>
                       <Progress
-                        value={(iteration.currentIteration / 200) * 100}
+                        value={(iteration.currentIteration / 100000) * 100}
                         className="h-2"
                       />
                       {iteration.bestMatch && (
-                        <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div className="grid grid-cols-3 gap-4 text-sm bg-muted/50 p-3 rounded">
                           <div>
                             <p className="text-muted-foreground">Best Total</p>
                             <p className="font-semibold">
@@ -220,13 +222,15 @@ export function IterationMonitorTab() {
                             <p className="text-muted-foreground">Difference</p>
                             <p
                               className={cn(
-                                "font-semibold",
-                                iteration.bestMatch.difference <= 30
-                                  ? "text-green-600"
-                                  : "text-red-600",
+                                "font-semibold text-lg",
+                                iteration.bestMatch.difference === 0
+                                  ? "text-green-600 font-bold"
+                                  : iteration.bestMatch.difference <= 20
+                                    ? "text-green-600"
+                                    : "text-red-600",
                               )}
                             >
-                              ₹{iteration.bestMatch.difference}
+                              {iteration.bestMatch.difference === 0 ? "✓ PERFECT" : `±₹${iteration.bestMatch.difference}`}
                             </p>
                           </div>
                         </div>
