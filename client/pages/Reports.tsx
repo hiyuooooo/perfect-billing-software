@@ -201,7 +201,7 @@ export default function Reports() {
 
       // Generate corrected bill using expected as target and same bill number
       const availableStock = getUnblockedStock();
-      generateBillsFromTransactions(
+      await generateBillsFromTransactions(
         [transaction],
         bill.billNumber,
         [],
