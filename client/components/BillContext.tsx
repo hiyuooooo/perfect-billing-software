@@ -652,34 +652,53 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
               total: currentTotal,
               difference: finalDiff,
             },
+            currentIteration: attempt + 1,
           });
         }
 
-        // Continue all 100,000 iterations to find the absolute best match
+        // Stop early if perfect match found
         if (finalDiff === 0) {
           console.log(
-            `Found perfect match on iteration ${attempt + 1}, continuing for optimization...`,
+            `✓ PERFECT MATCH FOUND on iteration ${attempt + 1}! Total: ₹${currentTotal}, difference: ₹0`,
           );
           if (monitorId && iterationMonitor) {
             iterationMonitor.logIteration(
               monitorId,
               attempt + 1,
-              `Perfect match found! Total: ₹${currentTotal}, difference: ₹0`,
+              `✓ PERFECT MATCH FOUND! Total: ₹${currentTotal}. Stopping iterations.`,
               "success",
             );
           }
+          break; // Stop iterations early for perfect match
         } else if (finalDiff <= tolerance && selectedItems.length >= 2) {
           console.log(
-            `Found good match within ±${tolerance} on iteration ${attempt + 1}, continuing for optimization...`,
+            `Good match within ±${tolerance} on iteration ${attempt + 1}: ₹${currentTotal}`,
           );
           if (monitorId && iterationMonitor) {
             iterationMonitor.logIteration(
               monitorId,
               attempt + 1,
-              `Good match found! Total: ₹${currentTotal}, difference: ₹${finalDiff}`,
+              `Good match found! Total: ₹${currentTotal}, difference: ±₹${finalDiff}`,
               "success",
             );
           }
+        } else if (attempt % 10000 === 0) {
+          // Log progress every 10,000 iterations
+          if (monitorId && iterationMonitor) {
+            iterationMonitor.logIteration(
+              monitorId,
+              attempt + 1,
+              `Iteration ${(attempt + 1).toLocaleString()}: Best so far ₹${currentTotal} (±₹${finalDiff})`,
+              "info",
+            );
+          }
+        }
+      } else if (attempt % 20000 === 0 && attempt > 0) {
+        // Update progress even when no improvement found
+        if (monitorId && iterationMonitor) {
+          iterationMonitor.updateIteration(monitorId, {
+            currentIteration: attempt + 1,
+          });
         }
       }
     }
