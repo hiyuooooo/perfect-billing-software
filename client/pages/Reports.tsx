@@ -263,7 +263,9 @@ export default function Reports() {
 
     if (!copied) {
       downloadText(text, `bill_${bill.billNumber}_mismatch.txt`);
-      alert("Clipboard is blocked by browser policy. Downloaded a text file instead.");
+      alert(
+        "Clipboard is blocked by browser policy. Downloaded a text file instead.",
+      );
     }
 
     if (andDelete) {
@@ -271,11 +273,19 @@ export default function Reports() {
         `Delete bill #${bill.billNumber} ${copied ? "after copying" : "after downloading"}? This cannot be undone.`,
       );
       if (!confirmed) {
-        alert(copied ? "Copy kept. Bill not deleted." : "File kept. Bill not deleted.");
+        alert(
+          copied
+            ? "Copy kept. Bill not deleted."
+            : "File kept. Bill not deleted.",
+        );
         return;
       }
       deleteBill(bill.id, { restoreStock });
-      alert(copied ? "Copied and deleted bill." : "Downloaded and deleted bill info.");
+      alert(
+        copied
+          ? "Copied and deleted bill."
+          : "Downloaded and deleted bill info.",
+      );
       return;
     }
 
@@ -1100,7 +1110,10 @@ export default function Reports() {
                   <Download className="h-4 w-4 mr-2" />
                   Export ({mismatchReports.length})
                 </Button>
-                <Button onClick={fixAllMismatches} disabled={mismatchReports.length === 0}>
+                <Button
+                  onClick={fixAllMismatches}
+                  disabled={mismatchReports.length === 0}
+                >
                   <Wand2 className="h-4 w-4 mr-2" />
                   Fix All
                 </Button>
@@ -1232,7 +1245,11 @@ export default function Reports() {
                                   variant="destructive"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    if (confirm(`Remove bill #${bill.billNumber} from mismatch report? Stock will be restored.`)) {
+                                    if (
+                                      confirm(
+                                        `Remove bill #${bill.billNumber} from mismatch report? Stock will be restored.`,
+                                      )
+                                    ) {
                                       deleteBill(bill.id, { restoreStock });
                                     }
                                   }}
@@ -1407,7 +1424,7 @@ export default function Reports() {
                         );
                         const startDate = new Date(bulkPdfDateRange.from);
                         const endDate = new Date(bulkPdfDateRange.to);
-                        endDate.setHours(23,59,59,999);
+                        endDate.setHours(23, 59, 59, 999);
                         return billDate >= startDate && billDate <= endDate;
                       }).length
                     }{" "}

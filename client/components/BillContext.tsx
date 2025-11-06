@@ -441,12 +441,16 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
     // Also exclude items with 0 price
     let availableItems = stockToUse.filter(
       (item) =>
-        !previousItems.includes(item.name) && item.availableQuantity > 0 && item.price > 0,
+        !previousItems.includes(item.name) &&
+        item.availableQuantity > 0 &&
+        item.price > 0,
     );
 
     if (availableItems.length < 2) {
       // If not enough unique items available, use all available items with stock and price > 0
-      availableItems = stockToUse.filter((item) => item.availableQuantity > 0 && item.price > 0);
+      availableItems = stockToUse.filter(
+        (item) => item.availableQuantity > 0 && item.price > 0,
+      );
       console.log(
         `Not enough unique items (${availableItems.length}), using all available items with stock: ${availableItems.length}`,
       );
@@ -553,7 +557,14 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
         // Try different quantities (bounded by available stock and remaining target)
         let bestQty = 0;
         let bestQtyTotal = 0;
-        const maxQty = Math.max(1, Math.min(item.availableQuantity, Math.ceil((targetTotal - currentTotal) / Math.max(1, item.price)) + 2));
+        const maxQty = Math.max(
+          1,
+          Math.min(
+            item.availableQuantity,
+            Math.ceil((targetTotal - currentTotal) / Math.max(1, item.price)) +
+              2,
+          ),
+        );
         for (let qty = 1; qty <= maxQty; qty++) {
           const itemCost = item.price * qty;
           const newTotal = currentTotal + itemCost;
@@ -804,7 +815,11 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
     const stockToUse =
       availableStock.length > 0
         ? availableStock
-            .filter((item) => item.availableQuantity > 0 && ((item as any).mrp ?? (item as any).price) > 0)
+            .filter(
+              (item) =>
+                item.availableQuantity > 0 &&
+                ((item as any).mrp ?? (item as any).price) > 0,
+            )
             .map((item) => ({
               id: (item as any).id,
               name: (item as any).itemName,
