@@ -423,7 +423,7 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
     return { items: adjustedItems, total: currentTotal };
   };
 
-  // Enhanced 200-iteration algorithm following Python bill generation rules
+  // Enhanced 100,000-iteration algorithm following Python bill generation rules
   const generateOptimalBillItems = (
     targetTotal: number,
     stockToUse: any[],
@@ -507,7 +507,7 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
         iterationMonitor.logIteration(
           monitorId,
           attempt + 1,
-          `Iteration ${attempt + 1}/200: Trying new combination...`,
+          `Iteration ${attempt + 1}/100,000: Trying new combination...`,
           "info",
         );
       }
@@ -759,7 +759,7 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
         if (monitorId && iterationMonitor) {
           iterationMonitor.logIteration(
             monitorId,
-            200,
+            100000,
             `Post-adjustment result: ${bestMatch.items.length} items, total: ₹${bestMatch.total}, difference: ₹${closestDiff}`,
             "info",
           );
@@ -777,7 +777,7 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
               difference: closestDiff,
             }
           : null,
-        currentIteration: 200,
+        currentIteration: 100000,
       });
       iterationMonitor.logIteration(
         monitorId,
