@@ -923,7 +923,7 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
         );
 
         // Generate bill items using enhanced algorithm
-        const result = generateOptimalBillItems(
+        const result = await generateOptimalBillItems(
           targetTotal,
           stockToUse,
           previousBillItems,
