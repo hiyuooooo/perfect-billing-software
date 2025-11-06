@@ -1233,7 +1233,7 @@ export default function Reports() {
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     if (confirm(`Remove bill #${bill.billNumber} from mismatch report? Stock will be restored.`)) {
-                                      deleteBill(bill.id, { restoreStock: true });
+                                      deleteBill(bill.id, { restoreStock });
                                     }
                                   }}
                                   title="Remove from mismatch report"
