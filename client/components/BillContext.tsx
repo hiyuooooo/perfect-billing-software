@@ -580,6 +580,36 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
       `within ±${tolerance}: ${closestDiff <= tolerance}`,
     );
 
+    // Post-generation adjustment: Add or remove items to match exact expected total
+    if (bestMatch && Math.abs(bestMatch.total - targetTotal) > 0) {
+      console.log(
+        `Starting post-generation adjustment. Current: ₹${bestMatch.total}, Target: ₹${targetTotal}`,
+      );
+
+      const adjustedBill = adjustBillToMatchTarget(
+        bestMatch,
+        targetTotal,
+        availableItems,
+      );
+
+      if (adjustedBill) {
+        bestMatch = adjustedBill;
+        closestDiff = Math.abs(bestMatch.total - targetTotal);
+        console.log(
+          `After adjustment: ${bestMatch.items.length} items, total: ₹${bestMatch.total}, difference: ₹${closestDiff}`,
+        );
+
+        if (monitorId && iterationMonitor) {
+          iterationMonitor.logIteration(
+            monitorId,
+            200,
+            `Post-adjustment result: ${bestMatch.items.length} items, total: ₹${bestMatch.total}, difference: ₹${closestDiff}`,
+            "info",
+          );
+        }
+      }
+    }
+
     // Complete iteration monitoring
     if (monitorId && iterationMonitor) {
       iterationMonitor.completeIteration(monitorId, {
