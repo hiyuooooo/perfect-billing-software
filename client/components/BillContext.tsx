@@ -489,7 +489,7 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
     } else if (targetTotal <= 9000) {
       // For bills ₹5000-₹9000, minimum 5 items, increase based on amount
       minItems = 5;
-      const itemsForAmount = Math.ceil(targetTotal / 1000) + 2; // 1 item per ₹1000 + 2
+      const itemsForAmount = Math.ceil(targetTotal / 1000) + 2; // 1 item per ���1000 + 2
       maxItems = Math.min(itemsForAmount, 10); // Cap at 10
     } else {
       // For bills > ₹9000, minimum 5 items, increase based on amount
@@ -930,7 +930,7 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
       let selectedItems: BillItem[] = [];
       let currentTotal = 0;
       let generationAttempt = 0;
-      const maxGenerationAttempts = 10; // Try up to 10 times per bill (each with 100,000 iterations)
+      const maxGenerationAttempts = 5; // Try up to 5 times per bill (each with 10,000 iterations)
       let billIsPerfect = false;
 
       while (!billIsPerfect && generationAttempt < maxGenerationAttempts) {
