@@ -965,45 +965,45 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
         console.warn(
           `Bill #${currentBillNumber}: No items generated, using fallback`,
         );
-        selectedItems = [];
-        currentTotal = 0;
 
         // Get available items with stock and price > 0
         const availableForFallback = stockToUse.filter(
           (item) => item.availableQuantity > 0 && item.price > 0,
         );
 
-        if (availableForFallback.length >= 2) {
-          // Sort by price and take cheapest items to meet minimum requirement
+        if (availableForFallback.length >= 1) {
+          // Sort by price
           const sortedItems = availableForFallback.sort(
             (a, b) => a.price - b.price,
           );
 
-          for (let i = 0; i < Math.min(2, sortedItems.length); i++) {
-            const item = sortedItems[i];
+          // Start with cheapest item and add items to reach target
+          selectedItems = [];
+          currentTotal = 0;
+
+          for (const item of sortedItems) {
+            if (currentTotal >= targetTotal) break; // Stop if we've reached target
+
+            const remainingAmount = targetTotal - currentTotal;
+            let qtyToAdd = Math.max(1, Math.ceil(remainingAmount / item.price));
+            qtyToAdd = Math.min(qtyToAdd, item.availableQuantity);
+
             const billItem = {
               id: item.id,
               name: item.name,
               price: item.price,
-              quantity: 1,
-              total: item.price,
+              quantity: qtyToAdd,
+              total: item.price * qtyToAdd,
             };
             selectedItems.push(billItem);
             currentTotal += billItem.total;
           }
-        } else if (availableForFallback.length === 1) {
-          const item = availableForFallback[0];
-          const maxQty = Math.min(5, item.availableQuantity);
-          selectedItems = [
-            {
-              id: item.id,
-              name: item.name,
-              price: item.price,
-              quantity: maxQty,
-              total: item.price * maxQty,
-            },
-          ];
-          currentTotal = item.price * maxQty;
+        } else {
+          console.error(
+            `Bill #${currentBillNumber}: No available stock items for fallback`,
+          );
+          // Skip this bill if no stock available
+          continue;
         }
       }
 
