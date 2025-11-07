@@ -1274,39 +1274,62 @@ export default function Transactions() {
                 </Button>
                 <Button
                   onClick={async () => {
-                    const selectedTransactions = getSelectedTransactions();
-                    if (selectedTransactions.length === 0) {
-                      alert(
-                        "Please select at least one transaction to generate bills.",
+                    try {
+                      console.log("Generate Bills button clicked");
+                      const selectedTransactions = getSelectedTransactions();
+                      console.log("Selected transactions:", selectedTransactions.length);
+
+                      if (selectedTransactions.length === 0) {
+                        alert(
+                          "Please select at least one transaction to generate bills.",
+                        );
+                        return;
+                      }
+
+                      const startBillNum = parseInt(startingBillNumber);
+                      if (isNaN(startBillNum)) {
+                        alert("Please enter a valid starting bill number.");
+                        return;
+                      }
+
+                      const blockedNumbers = billsToBlock
+                        ? billsToBlock
+                            .split(",")
+                            .map((n) => parseInt(n.trim()))
+                            .filter((n) => !isNaN(n))
+                        : [];
+
+                      console.log("Starting bill generation with:", {
+                        transactions: selectedTransactions.length,
+                        startBillNum,
+                        blockedNumbers,
+                      });
+
+                      const generatedBills = await generateBillsFromTransactions(
+                        selectedTransactions,
+                        startBillNum,
+                        blockedNumbers,
+                        getUnblockedStock(),
+                        reduceStock,
                       );
-                      return;
+
+                      console.log("Bills generated:", generatedBills.length);
+
+                      // Mark selected transactions as having bills generated
+                      markBillsGenerated(selectedTransactions.map((t) => t.id));
+
+                      alert(
+                        `Successfully generated ${generatedBills.length} bills! Check the Bills section to view them.`,
+                      );
+                      setIsGenerateBillsOpen(false);
+                      setStartingBillNumber("");
+                      setBillsToBlock("");
+                    } catch (error) {
+                      console.error("Error generating bills:", error);
+                      alert(
+                        `Error generating bills: ${error instanceof Error ? error.message : String(error)}`,
+                      );
                     }
-
-                    const startBillNum = parseInt(startingBillNumber);
-                    const blockedNumbers = billsToBlock
-                      ? billsToBlock
-                          .split(",")
-                          .map((n) => parseInt(n.trim()))
-                          .filter((n) => !isNaN(n))
-                      : [];
-
-                    const generatedBills = await generateBillsFromTransactions(
-                      selectedTransactions,
-                      startBillNum,
-                      blockedNumbers,
-                      getUnblockedStock(),
-                      reduceStock,
-                    );
-
-                    // Mark selected transactions as having bills generated
-                    markBillsGenerated(selectedTransactions.map((t) => t.id));
-
-                    alert(
-                      `Successfully generated ${generatedBills.length} bills! Check the Bills section to view them.`,
-                    );
-                    setIsGenerateBillsOpen(false);
-                    setStartingBillNumber("");
-                    setBillsToBlock("");
                   }}
                   disabled={!startingBillNumber}
                 >
