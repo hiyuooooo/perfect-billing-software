@@ -511,8 +511,8 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
       );
     }
 
-    // Complete 100,000 iterations to find the best combination
-    for (let attempt = 0; attempt < 100000; attempt++) {
+    // Complete 10,000 iterations to find the best combination
+    for (let attempt = 0; attempt < 10000; attempt++) {
       iterationsPerformed++;
 
       // Yield to UI every 500 iterations to keep page responsive
