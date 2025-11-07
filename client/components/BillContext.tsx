@@ -882,8 +882,10 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
     );
 
     let previousBillItems: string[] = [];
+    console.log("Starting main transaction loop...");
 
     for (let index = 0; index < transactions.length; index++) {
+      console.log(`Processing transaction ${index + 1}/${transactions.length}`);
       const transaction = transactions[index];
 
       // Skip blocked bill numbers - keep incrementing until we find an unblocked number
