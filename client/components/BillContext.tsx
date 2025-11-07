@@ -883,7 +883,9 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
 
     let previousBillItems: string[] = [];
 
-    transactions.forEach((transaction, index) => {
+    for (let index = 0; index < transactions.length; index++) {
+      const transaction = transactions[index];
+
       // Skip blocked bill numbers - keep incrementing until we find an unblocked number
       while (blockedNumbers.includes(currentBillNumber)) {
         console.log(`Skipping blocked bill number: ${currentBillNumber}`);
@@ -902,7 +904,7 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
         console.warn(
           `Skipping transaction ${transaction.id} - invalid total: ${targetTotal}`,
         );
-        return; // Skip invalid transactions
+        continue; // Skip invalid transactions
       }
 
       console.log(
@@ -1087,7 +1089,7 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
         console.log(`Pre-skipping blocked bill number: ${currentBillNumber}`);
         currentBillNumber++;
       }
-    });
+    }
 
     console.log("Generated", generatedBills.length, "bills total");
     setBills((prev) => [...prev, ...generatedBills]);
