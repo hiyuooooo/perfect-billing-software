@@ -826,6 +826,15 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
       );
     }
 
+    // Always return a valid result, even if not perfect
+    if (!bestMatch) {
+      console.warn(
+        `No valid bill items found for target ₹${targetTotal} after all iterations`,
+      );
+      // Return empty result instead of null
+      return { items: [], total: 0 };
+    }
+
     return bestMatch;
   };
 
