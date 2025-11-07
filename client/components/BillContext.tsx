@@ -824,8 +824,8 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
       });
       iterationMonitor.logIteration(
         monitorId,
-        100000,
-        `Completed all 100,000 iterations. Final result: ${bestMatch.items.length} items, total: ₹${bestMatch.total}, difference: ₹${closestDiff}`,
+        10000,
+        `Completed all 10,000 iterations. Final result: ${bestMatch.items.length} items, total: ₹${bestMatch.total}, difference: ₹${closestDiff}`,
         "success",
       );
     }
