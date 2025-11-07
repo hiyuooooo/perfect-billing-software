@@ -1094,7 +1094,9 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
     }
 
     console.log("Generated", generatedBills.length, "bills total");
+    console.log("Updating bills state...");
     setBills((prev) => [...prev, ...generatedBills]);
+    console.log("Bill generation complete, returning array");
     return generatedBills;
   };
 
