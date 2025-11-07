@@ -943,8 +943,8 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
           currentBillNumber,
         );
 
-        selectedItems = result.items;
-        currentTotal = result.total;
+        selectedItems = result?.items || [];
+        currentTotal = result?.total || 0;
 
         // Check if within tolerance
         const difference = Math.abs(currentTotal - targetTotal);
