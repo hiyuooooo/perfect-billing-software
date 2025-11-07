@@ -506,7 +506,7 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
       iterationMonitor.logIteration(
         monitorId,
         0,
-        `Starting 100,000 iterations for bill ${billNumber} with target ₹${targetTotal}`,
+        `Starting 10,000 iterations for bill ${billNumber} with target ₹${targetTotal}`,
         "info",
       );
     }
