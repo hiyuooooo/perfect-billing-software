@@ -177,14 +177,14 @@ export function IterationMonitorTab() {
                 <div className="bg-gray-100 p-4 rounded-lg mb-4">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-lg font-semibold">
-                      Iterations: {(iteration.currentIteration / 1000).toFixed(1)}K / 100K
+                      Iterations: {(iteration.currentIteration / 1000).toFixed(1)}K / 10K
                     </span>
                     <span className="text-sm text-muted-foreground">
-                      {((iteration.currentIteration / 100000) * 100).toFixed(1)}%
+                      {((iteration.currentIteration / 10000) * 100).toFixed(1)}%
                     </span>
                   </div>
                   <Progress
-                    value={(iteration.currentIteration / 100000) * 100}
+                    value={(iteration.currentIteration / 10000) * 100}
                     className="h-3"
                   />
                 </div>
