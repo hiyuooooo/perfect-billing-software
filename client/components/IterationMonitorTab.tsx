@@ -89,7 +89,7 @@ export function IterationMonitorTab() {
             Bill Generation Monitor
           </h2>
           <p className="text-muted-foreground">
-            Real-time monitoring of 100,000-iteration bill generation algorithm
+            Real-time monitoring of 10,000-iteration bill generation algorithm
           </p>
         </div>
         <Button
