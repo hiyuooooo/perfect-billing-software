@@ -59,7 +59,7 @@ export function IterationMonitorProvider({
       billNumber,
       targetTotal,
       currentIteration: 0,
-      totalIterations: 100000,
+      totalIterations: 10000,
       bestMatch: null,
       status: "pending",
       startTime: Date.now(),
