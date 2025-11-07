@@ -294,11 +294,11 @@ export function IterationMonitorTab() {
                       <div className="flex justify-between text-sm">
                         <span>Progress</span>
                         <span className="font-semibold text-blue-600">
-                          {(iteration.currentIteration / 1000).toFixed(1)}K / 100K iterations
+                          {(iteration.currentIteration / 1000).toFixed(1)}K / 10K iterations
                         </span>
                       </div>
                       <Progress
-                        value={(iteration.currentIteration / 100000) * 100}
+                        value={(iteration.currentIteration / 10000) * 100}
                         className="h-2"
                       />
                       {iteration.bestMatch && (
