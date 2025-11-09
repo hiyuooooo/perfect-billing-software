@@ -204,6 +204,8 @@ export default function Transactions() {
   const [isGenerateBillsOpen, setIsGenerateBillsOpen] = useState(false);
   const [startingBillNumber, setStartingBillNumber] = useState("");
   const [billsToBlock, setBillsToBlock] = useState("");
+  const [isGeneratingBills, setIsGeneratingBills] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState("");
 
   // Set default starting bill number to highest existing bill number + 1
   useEffect(() => {
