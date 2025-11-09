@@ -803,7 +803,7 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
         if (monitorId && iterationMonitor) {
           iterationMonitor.logIteration(
             monitorId,
-            100000,
+            3000,
             `Post-adjustment result: ${bestMatch.items.length} items, total: ₹${bestMatch.total}, difference: ₹${closestDiff}`,
             "info",
           );
