@@ -1278,9 +1278,9 @@ export default function Transactions() {
                 <Button
                   onClick={async () => {
                     try {
-                      console.log("Generate Bills button clicked");
+                      console.log("=== GENERATE BILLS DIALOG BUTTON CLICKED ===");
                       const selectedTransactions = getSelectedTransactions();
-                      console.log("Selected transactions:", selectedTransactions.length);
+                      console.log("Selected transactions count:", selectedTransactions.length);
 
                       if (selectedTransactions.length === 0) {
                         alert(
@@ -1302,12 +1302,14 @@ export default function Transactions() {
                             .filter((n) => !isNaN(n))
                         : [];
 
-                      console.log("Starting bill generation with:", {
-                        transactions: selectedTransactions.length,
-                        startBillNum,
-                        blockedNumbers,
+                      console.log("Bill generation parameters:", {
+                        transactionCount: selectedTransactions.length,
+                        startBillNumber: startBillNum,
+                        blockedNumbers: blockedNumbers,
+                        stockAvailable: getUnblockedStock().length,
                       });
 
+                      console.log("Calling generateBillsFromTransactions...");
                       const generatedBills = await generateBillsFromTransactions(
                         selectedTransactions,
                         startBillNum,
@@ -1316,21 +1318,34 @@ export default function Transactions() {
                         reduceStock,
                       );
 
-                      console.log("Bills generated:", generatedBills.length);
+                      console.log("Bills generation completed. Generated:", generatedBills.length);
+
+                      if (!Array.isArray(generatedBills)) {
+                        throw new Error("generateBillsFromTransactions did not return an array");
+                      }
+
+                      if (generatedBills.length === 0) {
+                        alert(
+                          "No bills were generated. This might be due to invalid stock or transaction data.",
+                        );
+                        return;
+                      }
 
                       // Mark selected transactions as having bills generated
                       markBillsGenerated(selectedTransactions.map((t) => t.id));
 
                       alert(
-                        `Successfully generated ${generatedBills.length} bills! Check the Bills section to view them.`,
+                        `✅ Successfully generated ${generatedBills.length} bills! Check the Bills section to view them.`,
                       );
                       setIsGenerateBillsOpen(false);
                       setStartingBillNumber("");
                       setBillsToBlock("");
                     } catch (error) {
-                      console.error("Error generating bills:", error);
+                      console.error("=== ERROR GENERATING BILLS ===", error);
+                      const errorMessage = error instanceof Error ? error.message : String(error);
+                      console.error("Error details:", errorMessage);
                       alert(
-                        `Error generating bills: ${error instanceof Error ? error.message : String(error)}`,
+                        `❌ Error generating bills:\n\n${errorMessage}\n\nCheck the browser console (F12) for more details.`,
                       );
                     }
                   }}
