@@ -177,7 +177,8 @@ export function IterationMonitorTab() {
                 <div className="bg-gray-100 p-4 rounded-lg mb-4">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-lg font-semibold">
-                      Iterations: {(iteration.currentIteration / 1000).toFixed(1)}K / 10K
+                      Iterations:{" "}
+                      {(iteration.currentIteration / 1000).toFixed(1)}K / 10K
                     </span>
                     <span className="text-sm text-muted-foreground">
                       {((iteration.currentIteration / 3000) * 100).toFixed(1)}%
@@ -192,7 +193,9 @@ export function IterationMonitorTab() {
                 {iteration.bestMatch && (
                   <div className="grid grid-cols-4 gap-3">
                     <div className="bg-blue-50 p-3 rounded">
-                      <p className="text-xs text-muted-foreground">Best Total</p>
+                      <p className="text-xs text-muted-foreground">
+                        Best Total
+                      </p>
                       <p className="text-xl font-bold">
                         ₹{iteration.bestMatch.total.toLocaleString()}
                       </p>
@@ -211,7 +214,9 @@ export function IterationMonitorTab() {
                           : "bg-orange-50",
                       )}
                     >
-                      <p className="text-xs text-muted-foreground">Difference</p>
+                      <p className="text-xs text-muted-foreground">
+                        Difference
+                      </p>
                       <p
                         className={cn(
                           "text-xl font-bold",
@@ -230,7 +235,8 @@ export function IterationMonitorTab() {
                     <div className="bg-indigo-50 p-3 rounded">
                       <p className="text-xs text-muted-foreground">Duration</p>
                       <p className="text-xl font-bold">
-                        {formatDuration(iteration.startTime).replace("ms", "")}ms
+                        {formatDuration(iteration.startTime).replace("ms", "")}
+                        ms
                       </p>
                     </div>
                   </div>
@@ -294,7 +300,8 @@ export function IterationMonitorTab() {
                       <div className="flex justify-between text-sm">
                         <span>Progress</span>
                         <span className="font-semibold text-blue-600">
-                          {(iteration.currentIteration / 1000).toFixed(1)}K / 10K iterations
+                          {(iteration.currentIteration / 1000).toFixed(1)}K /
+                          10K iterations
                         </span>
                       </div>
                       <Progress
@@ -327,7 +334,9 @@ export function IterationMonitorTab() {
                                     : "text-red-600",
                               )}
                             >
-                              {iteration.bestMatch.difference === 0 ? "✓ PERFECT" : `±₹${iteration.bestMatch.difference}`}
+                              {iteration.bestMatch.difference === 0
+                                ? "✓ PERFECT"
+                                : `±₹${iteration.bestMatch.difference}`}
                             </p>
                           </div>
                         </div>

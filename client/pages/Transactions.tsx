@@ -1112,19 +1112,41 @@ export default function Transactions() {
                                     try {
                                       if (activeAccount?.id) {
                                         window.dispatchEvent(
-                                          new CustomEvent("force-save-account-data", {
-                                            detail: { accountId: activeAccount.id },
-                                          }),
+                                          new CustomEvent(
+                                            "force-save-account-data",
+                                            {
+                                              detail: {
+                                                accountId: activeAccount.id,
+                                              },
+                                            },
+                                          ),
                                         );
                                       }
-                                      const nextBill = bills.length > 0 ? Math.max(...bills.map((b: any) => b.billNumber)) + 1 : 1001;
-                                      const cleanCustomer = transaction.customerName.endsWith("_c") ? transaction.customerName.slice(0, -2) : transaction.customerName;
+                                      const nextBill =
+                                        bills.length > 0
+                                          ? Math.max(
+                                              ...bills.map(
+                                                (b: any) => b.billNumber,
+                                              ),
+                                            ) + 1
+                                          : 1001;
+                                      const cleanCustomer =
+                                        transaction.customerName.endsWith("_c")
+                                          ? transaction.customerName.slice(
+                                              0,
+                                              -2,
+                                            )
+                                          : transaction.customerName;
                                       const params = new URLSearchParams({
                                         prefillBill: String(nextBill),
                                         prefillCustomer: cleanCustomer,
                                         prefillDate: transaction.date,
-                                        prefillTarget: String(transaction.total),
-                                        prefillPayment: getPaymentMode(transaction.customerName),
+                                        prefillTarget: String(
+                                          transaction.total,
+                                        ),
+                                        prefillPayment: getPaymentMode(
+                                          transaction.customerName,
+                                        ),
                                         prefillAuto: "true",
                                         prefillSubmit: "false",
                                       });
@@ -1193,8 +1215,13 @@ export default function Transactions() {
             }
             className="bg-green-600 hover:bg-green-700"
             onClick={() => {
-              console.log("Generate Bills button clicked - attempting to open dialog");
-              console.log("Selected transactions:", getSelectedTransactions().length);
+              console.log(
+                "Generate Bills button clicked - attempting to open dialog",
+              );
+              console.log(
+                "Selected transactions:",
+                getSelectedTransactions().length,
+              );
               console.log("Invalid count:", summary.invalidCount);
               setIsGenerateBillsOpen(true);
               loadBlockedBills();
@@ -1274,10 +1301,14 @@ export default function Transactions() {
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <div className="flex items-center space-x-2 mb-2">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                    <p className="font-medium text-blue-900">Generating bills...</p>
+                    <p className="font-medium text-blue-900">
+                      Generating bills...
+                    </p>
                   </div>
                   {generationProgress && (
-                    <p className="text-sm text-blue-800">{generationProgress}</p>
+                    <p className="text-sm text-blue-800">
+                      {generationProgress}
+                    </p>
                   )}
                   <p className="text-xs text-blue-700 mt-2">
                     This may take a minute or two. Please wait...
@@ -1296,9 +1327,14 @@ export default function Transactions() {
                 <Button
                   onClick={async () => {
                     try {
-                      console.log("=== GENERATE BILLS DIALOG BUTTON CLICKED ===");
+                      console.log(
+                        "=== GENERATE BILLS DIALOG BUTTON CLICKED ===",
+                      );
                       const selectedTransactions = getSelectedTransactions();
-                      console.log("Selected transactions count:", selectedTransactions.length);
+                      console.log(
+                        "Selected transactions count:",
+                        selectedTransactions.length,
+                      );
 
                       if (selectedTransactions.length === 0) {
                         alert(
@@ -1335,18 +1371,24 @@ export default function Transactions() {
                         `Generating ${selectedTransactions.length} bills...`,
                       );
 
-                      const generatedBills = await generateBillsFromTransactions(
-                        selectedTransactions,
-                        startBillNum,
-                        blockedNumbers,
-                        getUnblockedStock(),
-                        reduceStock,
+                      const generatedBills =
+                        await generateBillsFromTransactions(
+                          selectedTransactions,
+                          startBillNum,
+                          blockedNumbers,
+                          getUnblockedStock(),
+                          reduceStock,
+                        );
+
+                      console.log(
+                        "Bills generation completed. Generated:",
+                        generatedBills.length,
                       );
 
-                      console.log("Bills generation completed. Generated:", generatedBills.length);
-
                       if (!Array.isArray(generatedBills)) {
-                        throw new Error("generateBillsFromTransactions did not return an array");
+                        throw new Error(
+                          "generateBillsFromTransactions did not return an array",
+                        );
                       }
 
                       if (generatedBills.length === 0) {
@@ -1377,7 +1419,8 @@ export default function Transactions() {
                       setGenerationProgress("");
                     } catch (error) {
                       console.error("=== ERROR GENERATING BILLS ===", error);
-                      const errorMessage = error instanceof Error ? error.message : String(error);
+                      const errorMessage =
+                        error instanceof Error ? error.message : String(error);
                       console.error("Error details:", errorMessage);
                       setIsGeneratingBills(false);
                       setGenerationProgress("");
