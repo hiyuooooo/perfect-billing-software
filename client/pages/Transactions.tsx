@@ -1270,10 +1270,26 @@ export default function Transactions() {
                 </div>
               </div>
 
+              {isGeneratingBills && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                    <p className="font-medium text-blue-900">Generating bills...</p>
+                  </div>
+                  {generationProgress && (
+                    <p className="text-sm text-blue-800">{generationProgress}</p>
+                  )}
+                  <p className="text-xs text-blue-700 mt-2">
+                    This may take a minute or two. Please wait...
+                  </p>
+                </div>
+              )}
+
               <div className="flex justify-end space-x-2">
                 <Button
                   variant="outline"
                   onClick={() => setIsGenerateBillsOpen(false)}
+                  disabled={isGeneratingBills}
                 >
                   Cancel
                 </Button>
@@ -1304,6 +1320,9 @@ export default function Transactions() {
                             .filter((n) => !isNaN(n))
                         : [];
 
+                      setIsGeneratingBills(true);
+                      setGenerationProgress("Initializing...");
+
                       console.log("Bill generation parameters:", {
                         transactionCount: selectedTransactions.length,
                         startBillNumber: startBillNum,
@@ -1312,6 +1331,10 @@ export default function Transactions() {
                       });
 
                       console.log("Calling generateBillsFromTransactions...");
+                      setGenerationProgress(
+                        `Generating ${selectedTransactions.length} bills...`,
+                      );
+
                       const generatedBills = await generateBillsFromTransactions(
                         selectedTransactions,
                         startBillNum,
@@ -1330,11 +1353,19 @@ export default function Transactions() {
                         alert(
                           "No bills were generated. This might be due to invalid stock or transaction data.",
                         );
+                        setIsGeneratingBills(false);
                         return;
                       }
 
                       // Mark selected transactions as having bills generated
                       markBillsGenerated(selectedTransactions.map((t) => t.id));
+
+                      setGenerationProgress(
+                        `Successfully generated ${generatedBills.length} bills!`,
+                      );
+
+                      // Wait a moment before closing to show the success message
+                      await new Promise((resolve) => setTimeout(resolve, 1500));
 
                       alert(
                         `✅ Successfully generated ${generatedBills.length} bills! Check the Bills section to view them.`,
@@ -1342,19 +1373,23 @@ export default function Transactions() {
                       setIsGenerateBillsOpen(false);
                       setStartingBillNumber("");
                       setBillsToBlock("");
+                      setIsGeneratingBills(false);
+                      setGenerationProgress("");
                     } catch (error) {
                       console.error("=== ERROR GENERATING BILLS ===", error);
                       const errorMessage = error instanceof Error ? error.message : String(error);
                       console.error("Error details:", errorMessage);
+                      setIsGeneratingBills(false);
+                      setGenerationProgress("");
                       alert(
                         `❌ Error generating bills:\n\n${errorMessage}\n\nCheck the browser console (F12) for more details.`,
                       );
                     }
                   }}
-                  disabled={!startingBillNumber}
+                  disabled={!startingBillNumber || isGeneratingBills}
                 >
                   <FileText className="h-4 w-4 mr-2" />
-                  Generate Bills
+                  {isGeneratingBills ? "Generating..." : "Generate Bills"}
                 </Button>
               </div>
             </div>
