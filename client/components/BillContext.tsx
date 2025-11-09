@@ -511,17 +511,18 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
       );
     }
 
-    // Complete 10,000 iterations to find the best combination
-    for (let attempt = 0; attempt < 10000; attempt++) {
+    // Complete 3,000 iterations to find the best combination (reduced from 10,000 for faster generation)
+    const maxIterations = 3000;
+    for (let attempt = 0; attempt < maxIterations; attempt++) {
       iterationsPerformed++;
 
-      // Yield to UI every 200 iterations to keep page responsive
-      if (attempt % 200 === 0 && attempt > 0) {
+      // Yield to UI every 100 iterations to keep page responsive
+      if (attempt % 100 === 0 && attempt > 0) {
         await yieldToUI();
       }
 
-      // Log iteration progress every 2,000 iterations to avoid spam
-      if (attempt % 2000 === 0) {
+      // Log iteration progress every 1,000 iterations to avoid spam
+      if (attempt % 1000 === 0) {
         if (monitorId && iterationMonitor) {
           iterationMonitor.updateIteration(monitorId, {
             currentIteration: attempt + 1,
