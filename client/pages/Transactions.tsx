@@ -1191,6 +1191,9 @@ export default function Transactions() {
             }
             className="bg-green-600 hover:bg-green-700"
             onClick={() => {
+              console.log("Generate Bills button clicked - attempting to open dialog");
+              console.log("Selected transactions:", getSelectedTransactions().length);
+              console.log("Invalid count:", summary.invalidCount);
               setIsGenerateBillsOpen(true);
               loadBlockedBills();
             }}
