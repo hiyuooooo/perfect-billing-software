@@ -821,12 +821,12 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
               difference: closestDiff,
             }
           : null,
-        currentIteration: 100000,
+        currentIteration: 3000,
       });
       iterationMonitor.logIteration(
         monitorId,
-        10000,
-        `Completed all 10,000 iterations. Final result: ${bestMatch.items.length} items, total: ₹${bestMatch.total}, difference: ₹${closestDiff}`,
+        3000,
+        `Completed all 3,000 iterations. Final result: ${bestMatch.items.length} items, total: ₹${bestMatch.total}, difference: ₹${closestDiff}`,
         "success",
       );
     }
