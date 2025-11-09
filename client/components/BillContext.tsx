@@ -56,7 +56,7 @@ interface BillContextType {
     blockedNumbers: number[],
     availableStock?: any[],
     reduceStockCallback?: (id: number, quantity: number) => boolean,
-  ) => void;
+  ) => Promise<Bill[]>;
   deleteAllBills: () => void;
 }
 
