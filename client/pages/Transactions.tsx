@@ -1378,6 +1378,9 @@ export default function Transactions() {
                           blockedNumbers,
                           getUnblockedStock(),
                           reduceStock,
+                          (billNumber, message) => {
+                            setGenerationProgress(`Bill ${billNumber}/${selectedTransactions.length}: ${message}`);
+                          },
                         );
 
                       console.log(
