@@ -56,6 +56,7 @@ interface BillContextType {
     blockedNumbers: number[],
     availableStock?: any[],
     reduceStockCallback?: (id: number, quantity: number) => boolean,
+    progressCallback?: (billNumber: number, message: string) => void,
   ) => Promise<Bill[]>;
   deleteAllBills: () => void;
 }
@@ -849,6 +850,7 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
     blockedNumbers: number[],
     availableStock: any[] = [],
     reduceStockCallback?: (id: number, quantity: number) => boolean,
+    progressCallback?: (billNumber: number, message: string) => void,
   ) => {
     const generatedBills: Bill[] = [];
     let currentBillNumber = startingBillNumber;
@@ -951,12 +953,17 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
         selectedItems = result?.items || [];
         currentTotal = result?.total || 0;
 
-        // Check if within tolerance
+        // Check if within tolerance (±5 for perfect match, ±10 for acceptable)
         const difference = Math.abs(currentTotal - targetTotal);
-        if (difference <= 20) {
+        if (difference <= 5) {
           billIsPerfect = true;
           console.log(
             `✓ Bill #${currentBillNumber} is PERFECT: ₹${currentTotal} (target ₹${targetTotal}, difference ±${difference})`,
+          );
+        } else if (difference <= 10) {
+          billIsPerfect = true;
+          console.log(
+            `✓ Bill #${currentBillNumber} is ACCEPTABLE: ₹${currentTotal} (target ₹${targetTotal}, difference ±${difference})`,
           );
         } else {
           console.log(
@@ -1014,7 +1021,7 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
 
       // Final check and adjustment if still not perfect
       let finalDifference = Math.abs(currentTotal - targetTotal);
-      if (finalDifference > 20) {
+      if (finalDifference > 10) {
         console.log(
           `Bill #${currentBillNumber} still needs adjustment: difference ±${finalDifference}`,
         );
@@ -1026,7 +1033,7 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
           stockToUse,
         );
 
-        if (adjustmentResult && adjustmentResult.total !== currentTotal) {
+        if (adjustmentResult) {
           selectedItems = adjustmentResult.items;
           currentTotal = adjustmentResult.total;
           finalDifference = Math.abs(currentTotal - targetTotal);
@@ -1045,7 +1052,7 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
         subTotal: currentTotal,
         expectedTotal: targetTotal,
         paymentMode: transaction.paymentMode,
-        status: finalDifference <= 20 ? "generated" : "needs_review",
+        status: finalDifference <= 10 ? "generated" : "needs_review",
         difference: targetTotal - currentTotal,
         tolerance: finalDifference,
         headerInfo: {
@@ -1060,6 +1067,11 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
       };
 
       generatedBills.push(bill);
+
+      // Send progress update for UI with sequential numbering
+      if (progressCallback) {
+        progressCallback(generatedBills.length, `Generated Bill #${currentBillNumber}: ${transaction.customerName} - ₹${currentTotal}`);
+      }
 
       // Always reduce stock quantities when generating bills
       if (reduceStockCallback) {
