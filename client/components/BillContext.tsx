@@ -297,8 +297,8 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
     let currentTotal = initialBill.total;
     const difference = targetTotal - currentTotal;
 
-    // If already matching or very close, return as is
-    if (Math.abs(difference) <= 0) {
+    // If already matching perfectly, return as is
+    if (Math.abs(difference) === 0) {
       return initialBill;
     }
 
