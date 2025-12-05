@@ -162,6 +162,8 @@ export default function Transactions() {
     deleteAllTransactions,
   } = useTransaction();
 
+  const navigate = useNavigate();
+
   const handleDeleteAllTransactions = () => {
     if (
       confirm(
