@@ -3442,22 +3442,18 @@ export default function Bills() {
                               <tr key={index} className="border-b">
                                 <td className="p-3">{item.name}</td>
                                 <td className="p-3">
-                                  {manualMode ? (
-                                    <Input
-                                      type="number"
-                                      value={item.quantity}
-                                      onChange={(e) =>
-                                        updateSelectedItem(
-                                          index,
-                                          "quantity",
-                                          parseInt(e.target.value) || 0,
-                                        )
-                                      }
-                                      className="w-20"
-                                    />
-                                  ) : (
-                                    item.quantity
-                                  )}
+                                  <Input
+                                    type="number"
+                                    value={item.quantity}
+                                    onChange={(e) =>
+                                      updateSelectedItem(
+                                        index,
+                                        "quantity",
+                                        parseInt(e.target.value) || 0,
+                                      )
+                                    }
+                                    className="w-20"
+                                  />
                                 </td>
                                 <td className="p-3">
                                   {manualMode ? (
