@@ -52,6 +52,8 @@ import {
   RefreshCw,
   Upload,
   Settings,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";
