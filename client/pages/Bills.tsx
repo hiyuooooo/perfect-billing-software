@@ -3755,13 +3755,33 @@ export default function Bills() {
                                 </td>
                                 <td className="p-3">���{item.total}</td>
                                 <td className="p-3">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => removeEditItem(index)}
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
+                                  <div className="flex space-x-1">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => moveEditItemUp(index)}
+                                      disabled={index === 0}
+                                      title="Move up"
+                                    >
+                                      <ArrowUp className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => moveEditItemDown(index)}
+                                      disabled={index === editItems.length - 1}
+                                      title="Move down"
+                                    >
+                                      <ArrowDown className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => removeEditItem(index)}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
                                 </td>
                               </tr>
                             ))}
