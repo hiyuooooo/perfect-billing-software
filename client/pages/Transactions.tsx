@@ -1153,7 +1153,7 @@ export default function Transactions() {
                                         prefillAuto: "true",
                                         prefillSubmit: "false",
                                       });
-                                      window.location.href = `/bills?${params.toString()}`;
+                                      navigate(`/bills?${params.toString()}`);
                                     } catch (e) {
                                       console.error(e);
                                     }
