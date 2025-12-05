@@ -3567,7 +3567,7 @@ export default function Bills() {
                 open={!!selectedBill}
                 onOpenChange={() => setSelectedBill(null)}
               >
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Bill Details - {selectedBill.id}</DialogTitle>
                   </DialogHeader>
@@ -3654,7 +3654,7 @@ export default function Bills() {
                 open={isEditDialogOpen}
                 onOpenChange={setIsEditDialogOpen}
               >
-                <DialogContent className="max-w-4xl">
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>
                       Edit Bill - {editingBill.billNumber}
