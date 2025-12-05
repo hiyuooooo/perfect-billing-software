@@ -240,6 +240,24 @@ export default function Bills() {
     setEditItems((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const moveEditItemUp = (index: number) => {
+    if (index === 0) return;
+    setEditItems((prev) => {
+      const newItems = [...prev];
+      [newItems[index - 1], newItems[index]] = [newItems[index], newItems[index - 1]];
+      return newItems;
+    });
+  };
+
+  const moveEditItemDown = (index: number) => {
+    if (index === editItems.length - 1) return;
+    setEditItems((prev) => {
+      const newItems = [...prev];
+      [newItems[index], newItems[index + 1]] = [newItems[index + 1], newItems[index]];
+      return newItems;
+    });
+  };
+
   // Helpers to enforce price constraints relative to base (MRP)
   const basePriceById = React.useMemo(() => {
     const map = new Map<number, number>();
