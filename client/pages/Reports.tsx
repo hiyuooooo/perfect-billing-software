@@ -1189,16 +1189,26 @@ export default function Reports() {
                               ₹{bill.expectedTotal}
                             </td>
                             <td className="p-3">
-                              <span className="font-bold text-red-600">
-                                {bill.difference > 0 ? "+" : ""}₹
-                                {bill.difference}
-                              </span>
+                              {(() => {
+                                const calculatedDifference = bill.subTotal - bill.expectedTotal;
+                                return (
+                                  <span className="font-bold text-red-600">
+                                    {calculatedDifference > 0 ? "+" : ""}₹
+                                    {calculatedDifference}
+                                  </span>
+                                );
+                              })()}
                             </td>
                             <td className="p-3">
-                              <Badge variant="destructive">
-                                {bill.difference > 0 ? "Under" : "Over"} by ₹
-                                {Math.abs(bill.difference)}
-                              </Badge>
+                              {(() => {
+                                const calculatedDifference = bill.subTotal - bill.expectedTotal;
+                                return (
+                                  <Badge variant="destructive">
+                                    {calculatedDifference > 0 ? "Under" : "Over"} by ₹
+                                    {Math.abs(calculatedDifference)}
+                                  </Badge>
+                                );
+                              })()}
                             </td>
                             <td className="p-3">
                               <span className="text-sm text-muted-foreground">
