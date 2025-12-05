@@ -252,7 +252,19 @@ export default function HtmlReportProcessor() {
 
         ${list
           .map(
-            (bill, index) => `
+            (bill, index) => {
+              // Filter out items with zero rate or zero amount
+              const validItems = bill.items.filter((item) => item.price > 0 && item.total > 0);
+
+              // Calculate sub total from valid items only
+              const billSubTotal = validItems.reduce((sum, item) => sum + item.total, 0);
+
+              // Skip bills with no valid items
+              if (validItems.length === 0) {
+                return "";
+              }
+
+              return `
           <div class="bill-section">
             <div class="bill-header">
               <h4>Bill No: ${bill.billNumber} | Customer: ${bill.customerName} | Date: ${bill.date} | Payment: ${bill.paymentMode}</h4>
@@ -269,7 +281,7 @@ export default function HtmlReportProcessor() {
                 </tr>
               </thead>
               <tbody>
-                ${bill.items
+                ${validItems
                   .map(
                     (item, itemIndex) => `
                   <tr>
@@ -286,19 +298,28 @@ export default function HtmlReportProcessor() {
               <tfoot>
                 <tr class="total-row">
                   <td colspan="4">Sub Total:</td>
-                  <td>₹${bill.subTotal}</td>
+                  <td>₹${billSubTotal}</td>
                 </tr>
               </tfoot>
             </table>
           </div>
-        `,
+        `;
+            }
           )
           .join("")}
 
         <div class="grand-total">
-          <div>TOTAL SALES: ₹${list.reduce((sum, bill) => sum + bill.subTotal, 0).toLocaleString()}</div>
+          <div>TOTAL SALES: ₹${list
+            .reduce((sum, bill) => {
+              const validItems = bill.items.filter((item) => item.price > 0 && item.total > 0);
+              return sum + validItems.reduce((billSum, item) => billSum + item.total, 0);
+            }, 0)
+            .toLocaleString()}</div>
           <div style="font-size: 14px; margin-top: 10px;">
-            Total Bills: ${list.length} | Total Items: ${list.reduce((sum, bill) => sum + bill.items.length, 0)}
+            Total Bills: ${list.filter((bill) => bill.items.some((item) => item.price > 0 && item.total > 0)).length} | Total Items: ${list.reduce((sum, bill) => {
+              const validItems = bill.items.filter((item) => item.price > 0 && item.total > 0);
+              return sum + validItems.length;
+            }, 0)}
           </div>
         </div>
       </body>
