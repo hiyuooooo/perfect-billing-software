@@ -642,12 +642,18 @@ export default function Bills() {
 
       // Randomize max items within the iteration (for variety)
       let maxItems: number;
-      if (targetTotal < 500) {
-        // For bills < ₹500, allow 1-2 items
-        maxItems = Math.random() < 0.5 ? 1 : 2;
-      } else {
-        // For bills >= ₹500, randomize between 2-7 items
+      if (targetTotal < 100) {
+        // For bills < ₹100, use 1 item
+        maxItems = 1;
+      } else if (targetTotal < 5000) {
+        // For bills ₹100-₹5000, randomize between 2-7 items
         maxItems = Math.floor(Math.random() * 6) + 2; // Random between 2-7
+      } else if (targetTotal <= 9000) {
+        // For bills ₹5000-₹9000, randomize between 7-15 items
+        maxItems = Math.floor(Math.random() * 9) + 7; // Random between 7-15
+      } else {
+        // For bills > ₹9000, randomize between 8-20 items
+        maxItems = Math.floor(Math.random() * 13) + 8; // Random between 8-20
       }
 
       // First, try to select items based on target
