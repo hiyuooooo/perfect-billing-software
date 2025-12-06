@@ -3538,7 +3538,9 @@ export default function Bills() {
                             </tr>
                           </thead>
                           <tbody>
-                            {selectedItems.filter((item) => item.total > 0).map((item, index) => (
+                            {selectedItems.map((item, index) => {
+                              if (item.total <= 0) return null;
+                              return (
                               <tr key={index} className="border-b">
                                 <td className="p-3">{item.name}</td>
                                 <td className="p-3">
@@ -3581,10 +3583,11 @@ export default function Bills() {
                                     onClick={() => removeSelectedItem(index)}
                                   >
                                     <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                </td>
+                                </Button>
+                              </td>
                               </tr>
-                            ))}
+                              );
+                            })}
                           </tbody>
                           <tfoot>
                             <tr className="bg-muted/20 font-bold">
