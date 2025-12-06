@@ -3538,7 +3538,7 @@ export default function Bills() {
                             </tr>
                           </thead>
                           <tbody>
-                            {selectedItems.map((item, index) => (
+                            {selectedItems.filter((item) => item.total > 0).map((item, index) => (
                               <tr key={index} className="border-b">
                                 <td className="p-3">{item.name}</td>
                                 <td className="p-3">
