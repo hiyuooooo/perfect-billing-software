@@ -470,6 +470,47 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
       return { items: [], total: 0 };
     }
 
+    // For large bills, ensure we have a mix of items from different price ranges
+    if (targetTotal >= 5000 && availableItems.length > 10) {
+      // Sort items by price to create price tiers
+      const sortedByPrice = [...availableItems].sort((a, b) => a.price - b.price);
+      const lowPriceItems = sortedByPrice.slice(0, Math.ceil(sortedByPrice.length / 3));
+      const midPriceItems = sortedByPrice.slice(
+        Math.ceil(sortedByPrice.length / 3),
+        Math.ceil((sortedByPrice.length * 2) / 3),
+      );
+      const highPriceItems = sortedByPrice.slice(Math.ceil((sortedByPrice.length * 2) / 3));
+
+      // Shuffle and mix items from all price ranges
+      const mixedItems: any[] = [];
+      let lowIdx = 0,
+        midIdx = 0,
+        highIdx = 0;
+
+      // Prioritize high-priced items for large bills to reach targets more efficiently
+      while (
+        mixedItems.length < availableItems.length &&
+        (lowIdx < lowPriceItems.length || midIdx < midPriceItems.length || highIdx < highPriceItems.length)
+      ) {
+        if (highIdx < highPriceItems.length) {
+          mixedItems.push(highPriceItems[highIdx++]);
+        }
+        if (mixedItems.length >= availableItems.length) break;
+
+        if (midIdx < midPriceItems.length) {
+          mixedItems.push(midPriceItems[midIdx++]);
+        }
+        if (mixedItems.length >= availableItems.length) break;
+
+        if (lowIdx < lowPriceItems.length) {
+          mixedItems.push(lowPriceItems[lowIdx++]);
+        }
+      }
+
+      availableItems = mixedItems;
+      console.log("Large bill detected: prioritized high-priced items in selection pool");
+    }
+
     let bestMatch: { items: BillItem[]; total: number } | null = null;
     let closestDiff = Infinity;
     const tolerance = 20; // Final difference tolerance ±20
