@@ -705,10 +705,14 @@ export default function Bills() {
       ) {
         const item = shuffledItems[itemIndex];
 
-        // Try different quantities (no fixed cap; bounded by available stock and practicality)
+        // Try different quantities with a reasonable cap to avoid extreme quantities
         let bestQty = 0;
         let bestQtyTotal = 0;
-        const maxQty = Math.max(1, Math.min(item.availableQuantity, Math.ceil((targetTotal - currentTotal) / Math.max(1, item.price)) + 2));
+        // Cap max quantity at 25 to ensure balanced, human-like bills
+        const maxQtyPerItem = 25;
+        const calculatedMaxQty = Math.ceil((targetTotal - currentTotal) / Math.max(1, item.price)) + 2;
+        const maxQty = Math.max(1, Math.min(item.availableQuantity, calculatedMaxQty, maxQtyPerItem));
+
         for (let qty = 1; qty <= maxQty; qty++) {
           const itemCost = item.price * qty;
           const newTotal = currentTotal + itemCost;
