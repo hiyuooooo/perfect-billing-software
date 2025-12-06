@@ -491,12 +491,12 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
       // For bills ₹5000-₹9000, minimum 5 items, increase based on amount
       minItems = 7;
       const itemsForAmount = Math.ceil(targetTotal / 800) + 3; // 1 item per ���1000 + 2
-      maxItems = Math.min(itemsForAmount, 10); // Cap at 10
-    } else {
-      // For bills > ₹9000, minimum 5 items, increase based on amount
-      minItems = 5;
-      const itemsForAmount = Math.ceil(targetTotal / 1000) + 3; // 1 item per ₹1000 + 3
       maxItems = Math.min(itemsForAmount, 15); // Cap at 15
+    } else {
+      // For bills > ₹9000, minimum 8 items, increase based on amount
+      minItems = 8;
+      const itemsForAmount = Math.ceil(targetTotal / 700) + 4; // 1 item per ₹700 + 4
+      maxItems = Math.min(itemsForAmount, 20); // Cap at 20
     }
 
     // Start iteration monitoring if bill number provided
