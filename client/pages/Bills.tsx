@@ -579,45 +579,54 @@ export default function Bills() {
       return { items: [], total: 0 };
     }
 
-    // For large bills, ensure we have a mix of items from different price ranges
-    if (targetTotal >= 5000 && availableItems.length > 10) {
-      // Sort items by price to create price tiers
-      const sortedByPrice = [...availableItems].sort((a, b) => a.price - b.price);
-      const lowPriceItems = sortedByPrice.slice(0, Math.ceil(sortedByPrice.length / 3));
-      const midPriceItems = sortedByPrice.slice(
-        Math.ceil(sortedByPrice.length / 3),
-        Math.ceil((sortedByPrice.length * 2) / 3),
-      );
-      const highPriceItems = sortedByPrice.slice(Math.ceil((sortedByPrice.length * 2) / 3));
+    // Sort items by price and bias selection based on transaction value
+    const avgItemPrice = availableItems.reduce((sum, item) => sum + item.price, 0) / availableItems.length;
 
-      // Shuffle and mix items from all price ranges
-      const mixedItems: any[] = [];
-      let lowIdx = 0,
-        midIdx = 0,
-        highIdx = 0;
+    if (targetTotal >= 10000) {
+      // For very high bills (10000+), select mostly high-priced items (80% high-priced)
+      const sortedByPrice = [...availableItems].sort((a, b) => b.price - a.price); // Descending
+      const highPriceThreshold = Math.ceil(availableItems.length * 0.2);
+      const selectedHigh = sortedByPrice.slice(0, highPriceThreshold);
+      const selectedLow = sortedByPrice.slice(highPriceThreshold);
 
-      // Prioritize high-priced items for large bills to reach targets more efficiently
-      while (
-        mixedItems.length < availableItems.length &&
-        (lowIdx < lowPriceItems.length || midIdx < midPriceItems.length || highIdx < highPriceItems.length)
-      ) {
-        if (highIdx < highPriceItems.length) {
-          mixedItems.push(highPriceItems[highIdx++]);
-        }
-        if (mixedItems.length >= availableItems.length) break;
+      // Mix: 80% high-priced + 20% others
+      availableItems = [
+        ...selectedHigh,
+        ...selectedHigh,
+        ...selectedHigh,
+        ...selectedHigh,
+        ...selectedLow,
+      ].slice(0, availableItems.length);
+      console.log("Very high bill (10000+): heavily biased toward high-priced items");
+    } else if (targetTotal >= 5000) {
+      // For high bills (5000-9999), select mostly high-priced items (60% high-priced)
+      const sortedByPrice = [...availableItems].sort((a, b) => b.price - a.price); // Descending
+      const highPriceThreshold = Math.ceil(availableItems.length * 0.4);
+      const selectedHigh = sortedByPrice.slice(0, highPriceThreshold);
+      const selectedLow = sortedByPrice.slice(highPriceThreshold);
 
-        if (midIdx < midPriceItems.length) {
-          mixedItems.push(midPriceItems[midIdx++]);
-        }
-        if (mixedItems.length >= availableItems.length) break;
+      // Mix: 60% high-priced + 40% others
+      availableItems = [
+        ...selectedHigh,
+        ...selectedHigh,
+        ...selectedHigh,
+        ...selectedLow,
+        ...selectedLow,
+      ].slice(0, availableItems.length);
+      console.log("High bill (5000-9999): biased toward high-priced items (60%)");
+    } else if (targetTotal >= 1000) {
+      // For medium bills (1000-4999), balanced mix (40% high-priced)
+      const sortedByPrice = [...availableItems].sort((a, b) => b.price - a.price);
+      const highPriceThreshold = Math.ceil(availableItems.length * 0.6);
+      const selectedHigh = sortedByPrice.slice(0, highPriceThreshold);
+      const selectedLow = sortedByPrice.slice(highPriceThreshold);
 
-        if (lowIdx < lowPriceItems.length) {
-          mixedItems.push(lowPriceItems[lowIdx++]);
-        }
-      }
-
-      availableItems = mixedItems;
-      console.log("Large bill detected: prioritized high-priced items in selection pool");
+      availableItems = [...selectedHigh, ...selectedHigh, ...selectedLow, ...selectedLow].slice(0, availableItems.length);
+      console.log("Medium bill (1000-4999): balanced mix");
+    } else {
+      // For small bills (< 1000), prefer lower-priced items
+      availableItems = [...availableItems].sort((a, b) => a.price - b.price);
+      console.log("Small bill (<1000): biased toward low-priced items");
     }
 
     let bestMatch: { items: BillItem[]; total: number } | null = null;
