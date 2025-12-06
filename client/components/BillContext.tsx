@@ -613,12 +613,15 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
         // Try different quantities (bounded by available stock and remaining target)
         let bestQty = 0;
         let bestQtyTotal = 0;
+        // Cap max quantity at 25 to ensure balanced, human-like bills
+        const maxQtyPerItem = 25;
+        const calculatedMaxQty = Math.ceil((targetTotal - currentTotal) / Math.max(1, item.price)) + 2;
         const maxQty = Math.max(
           1,
           Math.min(
             item.availableQuantity,
-            Math.ceil((targetTotal - currentTotal) / Math.max(1, item.price)) +
-              2,
+            calculatedMaxQty,
+            maxQtyPerItem,
           ),
         );
         for (let qty = 1; qty <= maxQty; qty++) {
