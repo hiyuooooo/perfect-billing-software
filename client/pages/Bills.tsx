@@ -906,6 +906,40 @@ export default function Bills() {
     console.log(
       `Auto-select completed: ${bestMatch.items.length} items, total: ���${bestMatch.total}, difference: ₹${closestDiff}`,
     );
+
+    // Add low-priced items to balance the bill to exact target value (if needed)
+    const difference = targetTotal - bestMatch.total;
+    if (Math.abs(difference) > 0 && availableItems.length > 0) {
+      // Find low-priced items not already in the bill
+      const usedItemIds = new Set(bestMatch.items.map(item => item.id));
+      const lowPricedItems = availableItems
+        .filter(item => !usedItemIds.has(item.id))
+        .sort((a, b) => a.price - b.price);
+
+      // Add up to 2 low-priced items to balance
+      let remaining = difference;
+      let addedCount = 0;
+      for (const item of lowPricedItems) {
+        if (addedCount >= 2 || remaining <= 0) break;
+
+        const billItem: BillItem = {
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: 1,
+          total: item.price,
+        };
+
+        if (item.price <= Math.abs(remaining)) {
+          bestMatch.items.push(billItem);
+          bestMatch.total += billItem.total;
+          remaining -= billItem.total;
+          addedCount++;
+          console.log(`Added balancing item: ${item.name} (₹${item.price})`);
+        }
+      }
+    }
+
     return bestMatch;
   };
 
