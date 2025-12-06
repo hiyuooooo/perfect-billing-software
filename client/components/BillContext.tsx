@@ -489,8 +489,8 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
       maxItems = Math.floor(Math.random() * 6) + 2; // Random between 2-7
     } else if (targetTotal <= 9000) {
       // For bills ₹5000-₹9000, minimum 5 items, increase based on amount
-      minItems = 5;
-      const itemsForAmount = Math.ceil(targetTotal / 1000) + 2; // 1 item per ���1000 + 2
+      minItems = 7;
+      const itemsForAmount = Math.ceil(targetTotal / 800) + 3; // 1 item per ���1000 + 2
       maxItems = Math.min(itemsForAmount, 10); // Cap at 10
     } else {
       // For bills > ₹9000, minimum 5 items, increase based on amount
