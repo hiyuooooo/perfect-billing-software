@@ -1462,7 +1462,7 @@ export default function Bills() {
                   <td>${item.name}</td>
                   <td>${item.quantity}</td>
                   <td>₹${Number(item.price).toFixed(2)}</td>
-                  <td>₹${item.total}</td>
+                  <td>₹${Number(item.total).toFixed(2)}</td>
                 </tr>
               `,
                 )
@@ -1722,7 +1722,7 @@ export default function Bills() {
                   <td>${item.name}</td>
                   <td>${item.quantity}</td>
                   <td>₹${Number(item.price).toFixed(2)}</td>
-                  <td>₹${item.total}</td>
+                  <td>₹${Number(item.total).toFixed(2)}</td>
                 </tr>
               `,
                 )
@@ -2076,7 +2076,7 @@ export default function Bills() {
                     <td>${item.name}</td>
                     <td>${item.quantity}</td>
                     <td>₹${Number(item.price).toFixed(2)}</td>
-                    <td>₹${item.total}</td>
+                    <td>₹${Number(item.total).toFixed(2)}</td>
                   </tr>
                 `,
                   )
@@ -2381,7 +2381,7 @@ export default function Bills() {
                       <td>${item.name}</td>
                       <td>${item.quantity}</td>
                       <td>₹${Number(item.price).toFixed(2)}</td>
-                      <td>₹${item.total}</td>
+                      <td>₹${Number(item.total).toFixed(2)}</td>
                     </tr>
                   `,
                     )
@@ -3485,7 +3485,7 @@ export default function Bills() {
                                     `���${Number(item.price).toFixed(2)}`
                                   )}
                                 </td>
-                                <td className="p-3">��{item.total}</td>
+                                <td className="p-3">��{Number(item.total).toFixed(2)}</td>
                                 <td className="p-3">
                                   <Button
                                     size="sm"
@@ -3636,7 +3636,7 @@ export default function Bills() {
                                 <td className="p-3">{item.name}</td>
                                 <td className="p-3">{item.quantity}</td>
                                 <td className="p-3">₹{Number(item.price).toFixed(2)}</td>
-                                <td className="p-3">₹{item.total}</td>
+                                <td className="p-3">₹{Number(item.total).toFixed(2)}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -3761,7 +3761,7 @@ export default function Bills() {
                                     className="w-24"
                                   />
                                 </td>
-                                <td className="p-3">���{item.total}</td>
+                                <td className="p-3">���{Number(item.total).toFixed(2)}</td>
                                 <td className="p-3">
                                   <div className="flex space-x-1">
                                     <Button
