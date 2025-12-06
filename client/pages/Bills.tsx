@@ -1461,7 +1461,7 @@ export default function Bills() {
                   <td>${index + 1}</td>
                   <td>${item.name}</td>
                   <td>${item.quantity}</td>
-                  <td>₹${item.price}</td>
+                  <td>₹${Number(item.price).toFixed(2)}</td>
                   <td>₹${item.total}</td>
                 </tr>
               `,
@@ -1721,7 +1721,7 @@ export default function Bills() {
                   <td>${index + 1}</td>
                   <td>${item.name}</td>
                   <td>${item.quantity}</td>
-                  <td>₹${item.price}</td>
+                  <td>₹${Number(item.price).toFixed(2)}</td>
                   <td>₹${item.total}</td>
                 </tr>
               `,
@@ -2075,7 +2075,7 @@ export default function Bills() {
                     <td>${index + 1}</td>
                     <td>${item.name}</td>
                     <td>${item.quantity}</td>
-                    <td>₹${item.price}</td>
+                    <td>₹${Number(item.price).toFixed(2)}</td>
                     <td>₹${item.total}</td>
                   </tr>
                 `,
@@ -2380,7 +2380,7 @@ export default function Bills() {
                       <td>${itemIndex + 1}</td>
                       <td>${item.name}</td>
                       <td>${item.quantity}</td>
-                      <td>₹${item.price}</td>
+                      <td>₹${Number(item.price).toFixed(2)}</td>
                       <td>₹${item.total}</td>
                     </tr>
                   `,
@@ -3343,7 +3343,7 @@ export default function Bills() {
                                         {item.itemName}
                                       </span>
                                       <span className="text-sm text-muted-foreground">
-                                        ��{item.price} • Stock:{" "}
+                                        ��{Number(item.price).toFixed(2)} • Stock:{" "}
                                         {item.availableQuantity}{" "}
                                         {item.blocked && "• (Blocked)"}
                                       </span>
@@ -3471,7 +3471,7 @@ export default function Bills() {
                                   {manualMode ? (
                                     <Input
                                       type="number"
-                                      value={item.price}
+                                      value={Number(item.price).toFixed(2)}
                                       onChange={(e) =>
                                         updateSelectedItem(
                                           index,
@@ -3482,7 +3482,7 @@ export default function Bills() {
                                       className="w-24"
                                     />
                                   ) : (
-                                    `���${item.price}`
+                                    `���${Number(item.price).toFixed(2)}`
                                   )}
                                 </td>
                                 <td className="p-3">��{item.total}</td>
@@ -3635,7 +3635,7 @@ export default function Bills() {
                               <tr key={index} className="border-b">
                                 <td className="p-3">{item.name}</td>
                                 <td className="p-3">{item.quantity}</td>
-                                <td className="p-3">₹{item.price}</td>
+                                <td className="p-3">₹{Number(item.price).toFixed(2)}</td>
                                 <td className="p-3">₹{item.total}</td>
                               </tr>
                             ))}
@@ -3750,7 +3750,7 @@ export default function Bills() {
                                 <td className="p-3">
                                   <Input
                                     type="number"
-                                    value={item.price}
+                                    value={Number(item.price).toFixed(2)}
                                     onChange={(e) =>
                                       updateEditItem(
                                         index,
