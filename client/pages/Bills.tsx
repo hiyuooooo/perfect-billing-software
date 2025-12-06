@@ -599,12 +599,18 @@ export default function Bills() {
 
     // Compute minimum items requirement upfront (same for all iterations)
     let minItems: number;
-    if (targetTotal < 500) {
-      // For bills < ₹500, allow 1-2 items
+    if (targetTotal < 100) {
+      // For bills < ₹100, use 1 item
       minItems = 1;
-    } else {
-      // For bills >= ₹500, allow 2+ items
+    } else if (targetTotal < 5000) {
+      // For bills ₹100-₹5000, allow 2+ items
       minItems = 2;
+    } else if (targetTotal <= 9000) {
+      // For bills ₹5000-₹9000, minimum 7 items
+      minItems = 7;
+    } else {
+      // For bills > ₹9000, minimum 8 items
+      minItems = 8;
     }
 
     // Complete 200 iterations to find the best combination
