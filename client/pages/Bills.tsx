@@ -4190,6 +4190,15 @@ export default function Bills() {
                   </Button>
                   <Button
                     onClick={() => {
+                      generateMegaReport("excel");
+                      setIsMegaReportOptionsOpen(false);
+                    }}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Generate Excel
+                  </Button>
+                  <Button
+                    onClick={() => {
                       generateMegaReport("pdf");
                       setIsMegaReportOptionsOpen(false);
                     }}
