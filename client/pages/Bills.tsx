@@ -368,6 +368,9 @@ export default function Bills() {
     hideCustomerNames: false,
     totalAtLastPage: true,
     includeGST: false,
+    filterByDate: false,
+    fromDate: "",
+    toDate: "",
   });
   const [isPdfBookDialogOpen, setIsPdfBookDialogOpen] = useState(false);
   const [pdfBookOptions, setPdfBookOptions] = useState({
@@ -2530,10 +2533,20 @@ export default function Bills() {
   };
 
   const generateMegaReport = async (format: "pdf" | "excel") => {
-    const generatedBills = bills.filter((b) => b.status === "generated");
+    let generatedBills = bills.filter((b) => b.status === "generated");
+
+    // Apply date filter if enabled
+    if (megaReportOptions.filterByDate && megaReportOptions.fromDate && megaReportOptions.toDate) {
+      generatedBills = generatedBills.filter((bill) => {
+        const billDate = new Date(bill.date.split("-").reverse().join("-"));
+        const fromDate = new Date(megaReportOptions.fromDate);
+        const toDate = new Date(megaReportOptions.toDate);
+        return billDate >= fromDate && billDate <= toDate;
+      });
+    }
 
     if (generatedBills.length === 0) {
-      alert("No generated bills found for report.");
+      alert("No generated bills found for the selected date range.");
       return;
     }
 
@@ -2580,7 +2593,7 @@ export default function Bills() {
         ...(megaReportOptions.hideCustomerNames
           ? {}
           : { "Customer Name": "TOTAL" }),
-        "Bill Total": totalSum,
+        "Bill Total": parseFloat(totalSum.toFixed(2)),
         "Payment Mode": "",
       });
 
@@ -2607,15 +2620,20 @@ export default function Bills() {
       });
 
       XLSX.utils.book_append_sheet(workbook, worksheet, "Mega Report");
+      const dateRange = megaReportOptions.filterByDate && megaReportOptions.fromDate && megaReportOptions.toDate
+        ? `_${megaReportOptions.fromDate}_to_${megaReportOptions.toDate}`
+        : "";
       XLSX.writeFile(
         workbook,
-        `Mega_Report_${new Date().toISOString().split("T")[0]}.xlsx`,
+        `Mega_Report${dateRange}_${new Date().toISOString().split("T")[0]}.xlsx`,
       );
     } else {
       // PDF export using HTML
-      const totalSum = generatedBills.reduce(
-        (sum, bill) => sum + bill.subTotal,
-        0,
+      const totalSum = parseFloat(
+        generatedBills.reduce(
+          (sum, bill) => sum + bill.subTotal,
+          0,
+        ).toFixed(2)
       );
       const htmlContent = `
         <!DOCTYPE html>
@@ -2730,7 +2748,7 @@ export default function Bills() {
           <div class="report-info">
             <p><strong>Report Generated:</strong> ${new Date().toLocaleDateString()}</p>
             <p><strong>Total Bills:</strong> ${generatedBills.length}</p>
-            <p><strong>Period:</strong> ${generatedBills.length > 0 ? `${generatedBills[0].date} to ${generatedBills[generatedBills.length - 1].date}` : "N/A"}</p>
+            <p><strong>Period:</strong> ${megaReportOptions.filterByDate && megaReportOptions.fromDate && megaReportOptions.toDate ? `${megaReportOptions.fromDate} to ${megaReportOptions.toDate}` : (generatedBills.length > 0 ? `${generatedBills[0].date} to ${generatedBills[generatedBills.length - 1].date}` : "N/A")}</p>
           </div>
 
           <table class="report-table">
@@ -2762,7 +2780,7 @@ export default function Bills() {
             <tfoot>
               <tr class="total-row">
                 <td colspan="${megaReportOptions.hideCustomerNames ? "2" : "3"}"><strong>TOTAL:</strong></td>
-                <td><strong>₹${totalSum.toLocaleString()}</strong></td>
+                <td><strong>₹${totalSum.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</strong></td>
               </tr>
             </tfoot>
             `
@@ -2777,7 +2795,7 @@ export default function Bills() {
             <h2>Total Summary</h2>
             <div style="margin: 40px auto; padding: 30px; border: 2px solid #333; border-radius: 10px; width: 300px; background-color: #f8f9fa;">
               <p style="font-size: 18px; margin: 0;"><strong>Total Bills:</strong> ${generatedBills.length}</p>
-              <p style="font-size: 24px; margin: 20px 0 0 0; color: #333;"><strong>GRAND TOTAL: ₹${totalSum.toLocaleString()}</strong></p>
+              <p style="font-size: 24px; margin: 20px 0 0 0; color: #333;"><strong>GRAND TOTAL: ₹${totalSum.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</strong></p>
             </div>
           </div>
           `
@@ -4088,6 +4106,55 @@ export default function Bills() {
                     />
                     <Label htmlFor="includeGST">Include GST Information</Label>
                   </div>
+
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="filterByDate"
+                      checked={megaReportOptions.filterByDate}
+                      onChange={(e) =>
+                        setMegaReportOptions((prev) => ({
+                          ...prev,
+                          filterByDate: e.target.checked,
+                        }))
+                      }
+                      className="rounded"
+                    />
+                    <Label htmlFor="filterByDate">Filter by Date Range</Label>
+                  </div>
+
+                  {megaReportOptions.filterByDate && (
+                    <div className="space-y-2">
+                      <div>
+                        <Label htmlFor="fromDate" className="text-sm">From Date</Label>
+                        <Input
+                          id="fromDate"
+                          type="date"
+                          value={megaReportOptions.fromDate}
+                          onChange={(e) =>
+                            setMegaReportOptions((prev) => ({
+                              ...prev,
+                              fromDate: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="toDate" className="text-sm">To Date</Label>
+                        <Input
+                          id="toDate"
+                          type="date"
+                          value={megaReportOptions.toDate}
+                          onChange={(e) =>
+                            setMegaReportOptions((prev) => ({
+                              ...prev,
+                              toDate: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   <div className="bg-muted/30 p-3 rounded-lg">
                     <h4 className="font-medium mb-2 text-sm">
