@@ -4048,9 +4048,9 @@ export default function Bills() {
             >
               <DialogContent className="max-w-md">
                 <DialogHeader>
-                  <DialogTitle>Mega Report PDF Options</DialogTitle>
+                  <DialogTitle>Mega Report Options</DialogTitle>
                   <DialogDescription>
-                    Customize your mega report PDF settings
+                    Customize your mega report PDF and Excel settings
                   </DialogDescription>
                 </DialogHeader>
 
