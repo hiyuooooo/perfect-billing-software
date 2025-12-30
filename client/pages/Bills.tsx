@@ -2861,7 +2861,7 @@ export default function Bills() {
             </Button>
             <Button
               variant="outline"
-              onClick={() => generateMegaReport("excel")}
+              onClick={() => setIsMegaReportOptionsOpen(true)}
             >
               <Download className="h-4 w-4 mr-2" />
               Mega Report Excel
