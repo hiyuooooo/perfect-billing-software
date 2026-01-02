@@ -3646,22 +3646,18 @@ export default function Bills() {
                                   />
                                 </td>
                                 <td className="p-3">
-                                  {manualMode ? (
-                                    <Input
-                                      type="number"
-                                      value={Number(item.price).toFixed(2)}
-                                      onChange={(e) =>
-                                        updateSelectedItem(
-                                          index,
-                                          "price",
-                                          parseFloat(e.target.value) || 0,
-                                        )
-                                      }
-                                      className="w-24"
-                                    />
-                                  ) : (
-                                    `���${Number(item.price).toFixed(2)}`
-                                  )}
+                                  <Input
+                                    type="number"
+                                    value={Number(item.price).toFixed(2)}
+                                    onChange={(e) =>
+                                      updateSelectedItem(
+                                        index,
+                                        "price",
+                                        parseFloat(e.target.value) || 0,
+                                      )
+                                    }
+                                    className="w-24"
+                                  />
                                 </td>
                                 <td className="p-3">��{Number(item.total).toFixed(2)}</td>
                                 <td className="p-3">
