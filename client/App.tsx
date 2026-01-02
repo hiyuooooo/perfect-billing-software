@@ -13,6 +13,8 @@ import { StockProvider } from "@/components/StockContext";
 import { TransactionProvider } from "@/components/TransactionContext";
 import { CustomerProvider } from "@/components/CustomerContext";
 import { IterationMonitorProvider } from "@/components/IterationMonitor";
+import { TemplateProvider } from "@/components/TemplateContext";
+import { ShortcutsProvider } from "@/components/ShortcutsContext";
 import { useState } from "react";
 import Login from "./pages/Login";
 import Index from "./pages/Index";
