@@ -6,6 +6,8 @@ import { useStock } from "@/components/StockContext";
 import { useIterationMonitor } from "@/components/IterationMonitor";
 import { useCustomer } from "@/components/CustomerContext";
 import { useAccount } from "@/components/AccountManager";
+import { useTemplate } from "@/components/TemplateContext";
+import { useShortcuts } from "@/components/ShortcutsContext";
 import { Button } from "@/components/ui/button";
 import {
   Card,
