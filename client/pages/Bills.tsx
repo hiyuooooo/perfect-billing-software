@@ -3727,6 +3727,68 @@ export default function Bills() {
                     </div>
                   )}
 
+                  {/* Template Management */}
+                  {selectedItems.length > 0 && (
+                    <div className="border-t pt-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label className="font-semibold">Templates</Label>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setIsSaveTemplateOpen(true)}
+                        >
+                          <BookmarkPlus className="h-4 w-4 mr-2" />
+                          Save as Template
+                        </Button>
+                      </div>
+                      {templates.length > 0 && (
+                        <div className="space-y-2">
+                          <Label className="text-sm text-muted-foreground">
+                            Or load from saved templates:
+                          </Label>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {templates.map((template) => (
+                              <div
+                                key={template.id}
+                                className="flex items-center justify-between p-2 bg-muted/30 rounded"
+                              >
+                                <div className="flex-1">
+                                  <p className="font-medium text-sm">
+                                    {template.name}
+                                  </p>
+                                  {template.description && (
+                                    <p className="text-xs text-muted-foreground">
+                                      {template.description}
+                                    </p>
+                                  )}
+                                  <p className="text-xs text-muted-foreground">
+                                    {template.items.length} items
+                                  </p>
+                                </div>
+                                <div className="flex space-x-1">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleLoadTemplate(template.id)}
+                                  >
+                                    <Copy className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleDeleteTemplate(template.id)}
+                                  >
+                                    <Trash2 className="h-3 w-3 text-red-500" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <div className="flex justify-end space-x-2">
                     <Button
                       variant="outline"
