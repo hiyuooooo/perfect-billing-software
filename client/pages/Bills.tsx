@@ -363,6 +363,35 @@ export default function Bills() {
     setManualMode(mode);
     setSelectedItems([]); // Clear items when switching modes
   };
+
+  // Template functions
+  const handleSaveAsTemplate = () => {
+    if (!templateName.trim()) {
+      alert("Please enter a template name");
+      return;
+    }
+    saveTemplate(templateName, selectedItems, templateDescription);
+    alert(`Template "${templateName}" saved successfully!`);
+    setIsSaveTemplateOpen(false);
+    setTemplateName("");
+    setTemplateDescription("");
+  };
+
+  const handleLoadTemplate = (templateId: string) => {
+    const items = loadTemplate(templateId);
+    if (items) {
+      setSelectedItems(items);
+      alert("Template loaded successfully!");
+    }
+  };
+
+  const handleDeleteTemplate = (templateId: string) => {
+    if (confirm("Are you sure you want to delete this template?")) {
+      deleteTemplate(templateId);
+      alert("Template deleted successfully!");
+    }
+  };
+
   const [activeTab, setActiveTab] = useState("view");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
