@@ -147,8 +147,13 @@ export default function Bills() {
     number | null
   >(null);
 
-
-
+  // Template and Shortcuts
+  const { templates, saveTemplate, loadTemplate, deleteTemplate } = useTemplate();
+  const { registerShortcutHandler, unregisterShortcutHandler } = useShortcuts();
+  const [isSaveTemplateOpen, setIsSaveTemplateOpen] = useState(false);
+  const [templateName, setTemplateName] = useState("");
+  const [templateDescription, setTemplateDescription] = useState("");
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
 
 
   const handleDeleteBill = (billId: string) => {
