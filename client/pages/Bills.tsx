@@ -533,6 +533,37 @@ export default function Bills() {
     }
   }, [searchParams, bills]);
 
+  // Register shortcut handlers for Bills page
+  useEffect(() => {
+    const handleBillsShortcut = (action: string) => {
+      switch (action) {
+        case "create_bill":
+          setIsCreateDialogOpen(true);
+          break;
+        case "save_bill":
+          // Trigger save if form is filled
+          if (newBill.customerName && selectedItems.length > 0) {
+            saveBill();
+          }
+          break;
+        case "save_as_template":
+          if (selectedItems.length > 0) {
+            setIsSaveTemplateOpen(true);
+          }
+          break;
+        case "clear_items":
+          setSelectedItems([]);
+          break;
+      }
+    };
+
+    registerShortcutHandler("bills", handleBillsShortcut);
+
+    return () => {
+      unregisterShortcutHandler("bills");
+    };
+  }, [selectedItems, newBill]);
+
   // Filter bills based on search and status
   const filteredBills = useMemo(() => {
     return bills
