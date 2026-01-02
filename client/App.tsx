@@ -56,10 +56,12 @@ const App = () => {
             <StockProvider>
               <TransactionProvider>
                 <IterationMonitorProvider>
-                  <BillProvider>
-                    <Toaster />
-                    <Sonner />
-                    <BrowserRouter>
+                  <TemplateProvider>
+                    <ShortcutsProvider>
+                      <BillProvider>
+                        <Toaster />
+                        <Sonner />
+                        <BrowserRouter>
                       {!isLoggedIn ? (
                         <Login onLogin={handleLogin} />
                       ) : (
@@ -86,8 +88,10 @@ const App = () => {
                           <Route path="*" element={<NotFound />} />
                         </Routes>
                       )}
-                    </BrowserRouter>
-                  </BillProvider>
+                        </BrowserRouter>
+                      </BillProvider>
+                    </ShortcutsProvider>
+                  </TemplateProvider>
                 </IterationMonitorProvider>
               </TransactionProvider>
             </StockProvider>
