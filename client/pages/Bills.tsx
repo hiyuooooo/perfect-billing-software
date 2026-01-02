@@ -4477,6 +4477,66 @@ export default function Bills() {
                 </div>
               </DialogContent>
             </Dialog>
+
+            {/* Save as Template Dialog */}
+            <Dialog open={isSaveTemplateOpen} onOpenChange={setIsSaveTemplateOpen}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Save as Template</DialogTitle>
+                  <DialogDescription>
+                    Save current items as a reusable template for future bills
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="template-name">Template Name *</Label>
+                    <Input
+                      id="template-name"
+                      value={templateName}
+                      onChange={(e) => setTemplateName(e.target.value)}
+                      placeholder="e.g., Regular Weekly Order"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="template-description">Description</Label>
+                    <Textarea
+                      id="template-description"
+                      value={templateDescription}
+                      onChange={(e) => setTemplateDescription(e.target.value)}
+                      placeholder="Optional description of what this template is for"
+                      rows={3}
+                    />
+                  </div>
+                  <div className="bg-muted/30 p-3 rounded-lg">
+                    <h4 className="font-medium mb-2 text-sm">Template Preview</h4>
+                    <div className="text-xs space-y-1">
+                      <div className="flex justify-between">
+                        <span>Items:</span>
+                        <span>{selectedItems.length} items</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Total Value:</span>
+                        <span>₹{selectedItems.reduce((sum, item) => sum + item.total, 0).toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsSaveTemplateOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSaveAsTemplate}>
+                    <BookmarkPlus className="h-4 w-4 mr-2" />
+                    Save Template
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           <TabsContent value="monitor" className="space-y-6">
