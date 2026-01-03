@@ -17,6 +17,10 @@ interface ShortcutsContextType {
   getShortcutsBySection: (section: string) => Shortcut[];
   registerShortcutHandler: (section: string, handler: (key: string) => void) => void;
   unregisterShortcutHandler: (section: string) => void;
+  toggleAllShortcuts: (enabled: boolean) => void;
+  toggleSectionShortcuts: (section: string, enabled: boolean) => void;
+  areAllShortcutsEnabled: () => boolean;
+  areSectionShortcutsEnabled: (section: string) => boolean;
 }
 
 const ShortcutsContext = createContext<ShortcutsContextType | undefined>(undefined);
