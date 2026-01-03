@@ -166,13 +166,19 @@ export function ShortcutsProvider({ children }: { children: React.ReactNode }) {
   // Global keyboard event listener
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Don't trigger shortcuts when typing in input fields
+      // Don't trigger shortcuts when typing in input fields or when dialog is open
       const target = event.target as HTMLElement;
       if (
         target.tagName === "INPUT" ||
         target.tagName === "TEXTAREA" ||
         target.contentEditable === "true"
       ) {
+        return;
+      }
+
+      // Don't trigger shortcuts when any dialog is open
+      const dialogElement = document.querySelector("[role='dialog']");
+      if (dialogElement) {
         return;
       }
 
