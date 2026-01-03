@@ -162,7 +162,20 @@ export function ShortcutsSettings() {
           {/* Bills Shortcuts */}
           {billsShortcuts.length > 0 && (
             <div>
-              <h3 className="font-semibold mb-3 text-base">Bills Management</h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-base">Bills Management</h3>
+                <label className="flex items-center space-x-2 text-sm">
+                  <span>
+                    {areSectionShortcutsEnabled("bills") ? "✓ Enabled" : "✗ Disabled"}
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={areSectionShortcutsEnabled("bills")}
+                    onChange={(e) => toggleSectionShortcuts("bills", e.target.checked)}
+                    className="w-4 h-4 rounded"
+                  />
+                </label>
+              </div>
               <div className="space-y-2 bg-muted/30 p-3 rounded-lg">
                 {billsShortcuts.map((shortcut) => (
                   <div
