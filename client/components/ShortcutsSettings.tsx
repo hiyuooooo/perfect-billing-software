@@ -14,8 +14,16 @@ import {
 import { Keyboard, RotateCcw } from "lucide-react";
 
 export function ShortcutsSettings() {
-  const { shortcuts, updateShortcut, resetShortcuts, getShortcutsBySection } =
-    useShortcuts();
+  const {
+    shortcuts,
+    updateShortcut,
+    resetShortcuts,
+    getShortcutsBySection,
+    toggleAllShortcuts,
+    toggleSectionShortcuts,
+    areAllShortcutsEnabled,
+    areSectionShortcutsEnabled,
+  } = useShortcuts();
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingKey, setEditingKey] = useState("");
