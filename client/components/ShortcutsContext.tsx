@@ -145,6 +145,7 @@ const DEFAULT_SHORTCUTS: Shortcut[] = [
 export function ShortcutsProvider({ children }: { children: React.ReactNode }) {
   const [shortcuts, setShortcuts] = useState<Shortcut[]>(DEFAULT_SHORTCUTS);
   const [handlerMap, setHandlerMap] = useState<Map<string, (key: string) => void>>(new Map());
+  const navigate = useNavigate();
 
   // Load shortcuts from localStorage on mount
   useEffect(() => {
