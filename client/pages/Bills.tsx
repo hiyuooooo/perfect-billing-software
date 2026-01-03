@@ -570,9 +570,15 @@ export default function Bills() {
           setIsCreateDialogOpen(true);
           break;
         case "save_bill":
-          // Trigger save if form is filled
+          // Trigger create bill button if form is filled
           if (newBill.customerName && selectedItems.length > 0) {
-            saveBill();
+            handleCreateBill();
+          }
+          break;
+        case "add_to_bill":
+          // Trigger add to bill if manual mode and item is selected
+          if (manualMode && itemToAdd.stockItemId) {
+            addManualItem();
           }
           break;
         case "save_as_template":
