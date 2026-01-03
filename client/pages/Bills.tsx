@@ -597,7 +597,7 @@ export default function Bills() {
     return () => {
       unregisterShortcutHandler("bills");
     };
-  }, [selectedItems, newBill]);
+  }, [selectedItems, newBill, manualMode, itemToAdd, handleCreateBill, addManualItem]);
 
   // Filter bills based on search and status
   const filteredBills = useMemo(() => {
