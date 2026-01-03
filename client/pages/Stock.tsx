@@ -391,6 +391,26 @@ export default function Stock() {
     setIsQuickAddOpen(false);
   };
 
+  // Register shortcut handlers for Stock page
+  useEffect(() => {
+    const handleStockShortcut = (action: string) => {
+      switch (action) {
+        case "add_stock":
+          // Trigger add stock if quick add dialog is open and item is selected
+          if (isQuickAddOpen && quickAddData.itemPrefix && quickAddData.quantity) {
+            handleQuickAdd();
+          }
+          break;
+      }
+    };
+
+    registerShortcutHandler("stock", handleStockShortcut);
+
+    return () => {
+      unregisterShortcutHandler("stock");
+    };
+  }, [isQuickAddOpen, quickAddData, registerShortcutHandler, unregisterShortcutHandler, handleQuickAdd]);
+
   const saveEdit = () => {
     if (editingId === null) return;
 
