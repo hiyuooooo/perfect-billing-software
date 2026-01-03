@@ -57,9 +57,44 @@ export function ShortcutsSettings() {
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Master Enable/Disable Toggle */}
+          <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-base">Enable All Shortcuts</h3>
+                <p className="text-sm text-muted-foreground">
+                  {areAllShortcutsEnabled()
+                    ? "All shortcuts are currently enabled"
+                    : "Some or all shortcuts are disabled"}
+                </p>
+              </div>
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={areAllShortcutsEnabled()}
+                  onChange={(e) => toggleAllShortcuts(e.target.checked)}
+                  className="w-5 h-5 rounded"
+                />
+              </label>
+            </div>
+          </div>
+
           {/* Global Shortcuts */}
           <div>
-            <h3 className="font-semibold mb-3 text-base">Global Navigation</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-base">Global Navigation</h3>
+              <label className="flex items-center space-x-2 text-sm">
+                <span>
+                  {areSectionShortcutsEnabled("global") ? "✓ Enabled" : "✗ Disabled"}
+                </span>
+                <input
+                  type="checkbox"
+                  checked={areSectionShortcutsEnabled("global")}
+                  onChange={(e) => toggleSectionShortcuts("global", e.target.checked)}
+                  className="w-4 h-4 rounded"
+                />
+              </label>
+            </div>
             <div className="space-y-2 bg-muted/30 p-3 rounded-lg">
               {globalShortcuts.map((shortcut) => (
                 <div
