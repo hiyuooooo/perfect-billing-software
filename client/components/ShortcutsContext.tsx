@@ -149,6 +149,17 @@ const DEFAULT_SHORTCUTS: Shortcut[] = [
     enabled: true,
     isGlobal: false,
   },
+
+  // Stock page shortcuts
+  {
+    id: "stock_add",
+    key: "a",
+    section: "stock",
+    action: "add_stock",
+    description: "Add Stock",
+    enabled: true,
+    isGlobal: false,
+  },
 ];
 
 export function ShortcutsProvider({ children }: { children: React.ReactNode }) {
