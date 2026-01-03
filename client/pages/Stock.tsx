@@ -200,6 +200,27 @@ export default function Stock() {
     }
   }, [activeAccount?.id, stockItems.length]);
 
+  // Register shortcut handlers for Stock page
+  const { registerShortcutHandler, unregisterShortcutHandler } = useShortcuts();
+  useEffect(() => {
+    const handleStockShortcut = (action: string) => {
+      switch (action) {
+        case "add_stock":
+          // Trigger add stock if quick add dialog is open and item is selected
+          if (isQuickAddOpen && quickAddData.itemPrefix && quickAddData.quantity) {
+            handleQuickAdd();
+          }
+          break;
+      }
+    };
+
+    registerShortcutHandler("stock", handleStockShortcut);
+
+    return () => {
+      unregisterShortcutHandler("stock");
+    };
+  }, [isQuickAddOpen, quickAddData]);
+
   // Function to check if a stock item is used in any bills
   const isStockUsedInBills = (
     stockId: number,
