@@ -199,22 +199,22 @@ export function ShortcutsProvider({ children }: { children: React.ReactNode }) {
             // Handle global shortcuts
             switch (shortcut.action) {
               case "dashboard":
-                window.location.href = "/";
+                navigate("/");
                 break;
               case "transactions":
-                window.location.href = "/transactions";
+                navigate("/transactions");
                 break;
               case "bills":
-                window.location.href = "/bills";
+                navigate("/bills");
                 break;
               case "stock":
-                window.location.href = "/stock";
+                navigate("/stock");
                 break;
               case "mismatch":
-                window.location.href = "/bill-blocker";
+                navigate("/reports");
                 break;
               case "customers":
-                window.location.href = "/customers";
+                navigate("/customers");
                 break;
             }
           } else {
