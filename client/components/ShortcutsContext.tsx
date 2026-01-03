@@ -257,6 +257,29 @@ export function ShortcutsProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const toggleAllShortcuts = (enabled: boolean) => {
+    setShortcuts((prev) =>
+      prev.map((s) => ({ ...s, enabled }))
+    );
+  };
+
+  const toggleSectionShortcuts = (section: string, enabled: boolean) => {
+    setShortcuts((prev) =>
+      prev.map((s) =>
+        s.section === section ? { ...s, enabled } : s
+      )
+    );
+  };
+
+  const areAllShortcutsEnabled = () => {
+    return shortcuts.every((s) => s.enabled);
+  };
+
+  const areSectionShortcutsEnabled = (section: string) => {
+    const sectionShortcuts = shortcuts.filter((s) => s.section === section);
+    return sectionShortcuts.length > 0 && sectionShortcuts.every((s) => s.enabled);
+  };
+
   return (
     <ShortcutsContext.Provider
       value={{
@@ -266,6 +289,10 @@ export function ShortcutsProvider({ children }: { children: React.ReactNode }) {
         getShortcutsBySection,
         registerShortcutHandler,
         unregisterShortcutHandler,
+        toggleAllShortcuts,
+        toggleSectionShortcuts,
+        areAllShortcutsEnabled,
+        areSectionShortcutsEnabled,
       }}
     >
       {children}
