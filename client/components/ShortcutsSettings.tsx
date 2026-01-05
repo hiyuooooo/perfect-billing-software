@@ -39,6 +39,7 @@ export function ShortcutsSettings() {
   const globalShortcuts = getShortcutsBySection("global");
   const billsShortcuts = getShortcutsBySection("bills");
   const transactionsShortcuts = getShortcutsBySection("transactions");
+  const stockShortcuts = getShortcutsBySection("stock");
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -178,6 +179,90 @@ export function ShortcutsSettings() {
               </div>
               <div className="space-y-2 bg-muted/30 p-3 rounded-lg">
                 {billsShortcuts.map((shortcut) => (
+                  <div
+                    key={shortcut.id}
+                    className="flex items-center justify-between p-2 hover:bg-muted/50 rounded"
+                  >
+                    <div className="flex-1">
+                      <Label className="text-sm font-medium">
+                        {shortcut.description}
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        {shortcut.action}
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      {editingId === shortcut.id ? (
+                        <>
+                          <Input
+                            autoFocus
+                            value={editingKey}
+                            onChange={(e) =>
+                              setEditingKey(e.target.value.toLowerCase())
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                handleKeyChange(shortcut.id);
+                              } else if (e.key === "Escape") {
+                                setEditingId(null);
+                                setEditingKey("");
+                              }
+                            }}
+                            className="w-16 h-8 text-center text-xs"
+                            maxLength={1}
+                          />
+                          <Button
+                            size="sm"
+                            onClick={() => handleKeyChange(shortcut.id)}
+                            className="h-8"
+                          >
+                            Save
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <kbd className="px-2 py-1 bg-primary text-primary-foreground rounded text-xs font-semibold">
+                            {shortcut.key.toUpperCase()}
+                          </kbd>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setEditingId(shortcut.id);
+                              setEditingKey(shortcut.key);
+                            }}
+                            className="h-8 text-xs"
+                          >
+                            Change
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Stock Shortcuts */}
+          {stockShortcuts.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-base">Stock Management</h3>
+                <label className="flex items-center space-x-2 text-sm">
+                  <span>
+                    {areSectionShortcutsEnabled("stock") ? "✓ Enabled" : "✗ Disabled"}
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={areSectionShortcutsEnabled("stock")}
+                    onChange={(e) => toggleSectionShortcuts("stock", e.target.checked)}
+                    className="w-4 h-4 rounded"
+                  />
+                </label>
+              </div>
+              <div className="space-y-2 bg-muted/30 p-3 rounded-lg">
+                {stockShortcuts.map((shortcut) => (
                   <div
                     key={shortcut.id}
                     className="flex items-center justify-between p-2 hover:bg-muted/50 rounded"
