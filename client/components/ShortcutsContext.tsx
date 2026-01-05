@@ -176,12 +176,22 @@ export function ShortcutsProvider({ children }: { children: React.ReactNode }) {
   const [handlerMap, setHandlerMap] = useState<Map<string, (key: string) => void>>(new Map());
   const navigate = useNavigate();
 
-  // Load shortcuts from localStorage on mount
+  // Load shortcuts from localStorage on mount and merge with defaults
   useEffect(() => {
     const saved = localStorage.getItem("shortcuts");
     if (saved) {
       try {
-        setShortcuts(JSON.parse(saved));
+        const savedShortcuts = JSON.parse(saved);
+
+        // Merge new defaults with saved shortcuts
+        // Keep saved shortcuts but add any new ones from DEFAULT_SHORTCUTS
+        const savedIds = new Set(savedShortcuts.map((s: Shortcut) => s.id));
+        const newShortcuts = [
+          ...savedShortcuts,
+          ...DEFAULT_SHORTCUTS.filter((s) => !savedIds.has(s.id)),
+        ];
+
+        setShortcuts(newShortcuts);
       } catch (error) {
         console.error("Failed to load shortcuts:", error);
         setShortcuts(DEFAULT_SHORTCUTS);
