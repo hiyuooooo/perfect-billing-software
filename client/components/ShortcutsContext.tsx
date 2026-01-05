@@ -197,7 +197,7 @@ export function ShortcutsProvider({ children }: { children: React.ReactNode }) {
   // Global keyboard event listener
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Don't trigger shortcuts when typing in input fields or when dialog is open
+      // Don't trigger shortcuts when typing in input fields
       const target = event.target as HTMLElement;
       if (
         target.tagName === "INPUT" ||
@@ -207,14 +207,9 @@ export function ShortcutsProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Don't trigger shortcuts when any dialog is open
-      const dialogElement = document.querySelector("[role='dialog']");
-      if (dialogElement) {
-        return;
-      }
-
       const key = event.key.toLowerCase();
       const isCtrlOrCmd = event.ctrlKey || event.metaKey;
+      const dialogElement = document.querySelector("[role='dialog']");
 
       shortcuts.forEach((shortcut) => {
         if (
@@ -222,6 +217,11 @@ export function ShortcutsProvider({ children }: { children: React.ReactNode }) {
           shortcut.key.toLowerCase() === key &&
           (shortcut.isGlobal || handlerMap.has(shortcut.section))
         ) {
+          // Don't trigger GLOBAL shortcuts when dialog is open, but allow SECTION-SPECIFIC shortcuts
+          if (shortcut.isGlobal && dialogElement) {
+            return;
+          }
+
           event.preventDefault();
 
           if (shortcut.isGlobal) {
@@ -247,7 +247,7 @@ export function ShortcutsProvider({ children }: { children: React.ReactNode }) {
                 break;
             }
           } else {
-            // Handle section-specific shortcuts
+            // Handle section-specific shortcuts (works even inside dialogs)
             const handler = handlerMap.get(shortcut.section);
             if (handler) {
               handler(shortcut.action);
