@@ -527,6 +527,20 @@ export default function Bills() {
     }
   }, [searchParams, isCreateDialogOpen, selectedItems, newBill]);
 
+  // Auto-populate bill number when dialog opens
+  useEffect(() => {
+    if (isCreateDialogOpen && !newBill.billNumber.trim()) {
+      // Calculate next bill number (highest existing + 1)
+      const maxExisting = bills.length ? Math.max(...bills.map((b) => b.billNumber)) : 1000;
+      const nextBillNumber = (maxExisting + 1).toString();
+
+      setNewBill((prev) => ({
+        ...prev,
+        billNumber: nextBillNumber,
+      }));
+    }
+  }, [isCreateDialogOpen, bills]);
+
   // Handle highlighting and customer filter from URL parameters
   useEffect(() => {
     const highlightParam = searchParams.get("highlight");
