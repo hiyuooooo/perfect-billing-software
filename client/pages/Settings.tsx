@@ -21,7 +21,10 @@ import {
   FileText,
   Database,
   Shield,
+  Moon,
+  Sun,
 } from "lucide-react";
+import { useDarkMode } from "@/components/DarkModeContext";
 
 // Helper function to ensure invoice settings have proper defaults
 const ensureInvoiceSettingsDefaults = (settings: any, activeAccount: any) => {
