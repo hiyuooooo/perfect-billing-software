@@ -792,6 +792,26 @@ export default function Settings() {
                     />
                   </div>
 
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="flex items-center gap-2">
+                        {isDarkMode ? (
+                          <Moon className="h-4 w-4" />
+                        ) : (
+                          <Sun className="h-4 w-4" />
+                        )}
+                        Dark Mode (Night Mode)
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        {isDarkMode ? "Dark mode is currently enabled" : "Light mode is currently active"}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={isDarkMode}
+                      onCheckedChange={toggleDarkMode}
+                    />
+                  </div>
+
                   <div className="space-y-4">
                     <h4 className="font-medium">Data Management</h4>
                     <div className="space-y-3">
