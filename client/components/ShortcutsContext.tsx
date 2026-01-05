@@ -152,11 +152,20 @@ const DEFAULT_SHORTCUTS: Shortcut[] = [
 
   // Stock page shortcuts
   {
+    id: "stock_quick_add",
+    key: "q",
+    section: "stock",
+    action: "quick_add_stock",
+    description: "Open Quick Add Stock Dialog",
+    enabled: true,
+    isGlobal: false,
+  },
+  {
     id: "stock_add",
     key: "a",
     section: "stock",
     action: "add_stock",
-    description: "Add Stock",
+    description: "Add Stock Button",
     enabled: true,
     isGlobal: false,
   },
