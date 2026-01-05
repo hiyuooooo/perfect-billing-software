@@ -3275,7 +3275,7 @@ export default function Bills() {
                             billNumber: e.target.value,
                           }))
                         }
-                        placeholder="Auto-generated if empty"
+                        placeholder="Auto-populated with next number (editable)"
                       />
                     </div>
                     <div className="space-y-2">
