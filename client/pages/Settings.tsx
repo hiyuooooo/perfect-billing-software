@@ -48,6 +48,7 @@ const ensureInvoiceSettingsDefaults = (settings: any, activeAccount: any) => {
 
 export default function Settings() {
   const { activeAccount } = useAccount();
+  const { isDarkMode, toggleDarkMode } = useDarkMode();
 
   const [notifications, setNotifications] = useState(() => {
     if (!activeAccount)
