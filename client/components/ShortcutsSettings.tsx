@@ -30,7 +30,11 @@ export function ShortcutsSettings() {
 
   const handleKeyChange = (id: string) => {
     if (editingKey.trim()) {
-      updateShortcut(id, editingKey, shortcuts.find((s) => s.id === id)?.enabled ?? true);
+      updateShortcut(
+        id,
+        editingKey,
+        shortcuts.find((s) => s.id === id)?.enabled ?? true,
+      );
       setEditingId(null);
       setEditingKey("");
     }
@@ -44,7 +48,11 @@ export function ShortcutsSettings() {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="w-full justify-start text-sm">
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full justify-start text-sm"
+        >
           <Keyboard className="h-4 w-4 mr-2" />
           Shortcuts
         </Button>
@@ -62,7 +70,9 @@ export function ShortcutsSettings() {
           <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-semibold text-base">Enable All Shortcuts</h3>
+                <h3 className="font-semibold text-base">
+                  Enable All Shortcuts
+                </h3>
                 <p className="text-sm text-muted-foreground">
                   {areAllShortcutsEnabled()
                     ? "All shortcuts are currently enabled"
@@ -86,12 +96,16 @@ export function ShortcutsSettings() {
               <h3 className="font-semibold text-base">Global Navigation</h3>
               <label className="flex items-center space-x-2 text-sm">
                 <span>
-                  {areSectionShortcutsEnabled("global") ? "✓ Enabled" : "✗ Disabled"}
+                  {areSectionShortcutsEnabled("global")
+                    ? "✓ Enabled"
+                    : "✗ Disabled"}
                 </span>
                 <input
                   type="checkbox"
                   checked={areSectionShortcutsEnabled("global")}
-                  onChange={(e) => toggleSectionShortcuts("global", e.target.checked)}
+                  onChange={(e) =>
+                    toggleSectionShortcuts("global", e.target.checked)
+                  }
                   className="w-4 h-4 rounded"
                 />
               </label>
@@ -116,7 +130,9 @@ export function ShortcutsSettings() {
                         <Input
                           autoFocus
                           value={editingKey}
-                          onChange={(e) => setEditingKey(e.target.value.toLowerCase())}
+                          onChange={(e) =>
+                            setEditingKey(e.target.value.toLowerCase())
+                          }
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
                               handleKeyChange(shortcut.id);
@@ -167,12 +183,16 @@ export function ShortcutsSettings() {
                 <h3 className="font-semibold text-base">Bills Management</h3>
                 <label className="flex items-center space-x-2 text-sm">
                   <span>
-                    {areSectionShortcutsEnabled("bills") ? "✓ Enabled" : "✗ Disabled"}
+                    {areSectionShortcutsEnabled("bills")
+                      ? "✓ Enabled"
+                      : "✗ Disabled"}
                   </span>
                   <input
                     type="checkbox"
                     checked={areSectionShortcutsEnabled("bills")}
-                    onChange={(e) => toggleSectionShortcuts("bills", e.target.checked)}
+                    onChange={(e) =>
+                      toggleSectionShortcuts("bills", e.target.checked)
+                    }
                     className="w-4 h-4 rounded"
                   />
                 </label>
@@ -251,12 +271,16 @@ export function ShortcutsSettings() {
                 <h3 className="font-semibold text-base">Stock Management</h3>
                 <label className="flex items-center space-x-2 text-sm">
                   <span>
-                    {areSectionShortcutsEnabled("stock") ? "✓ Enabled" : "✗ Disabled"}
+                    {areSectionShortcutsEnabled("stock")
+                      ? "✓ Enabled"
+                      : "✗ Disabled"}
                   </span>
                   <input
                     type="checkbox"
                     checked={areSectionShortcutsEnabled("stock")}
-                    onChange={(e) => toggleSectionShortcuts("stock", e.target.checked)}
+                    onChange={(e) =>
+                      toggleSectionShortcuts("stock", e.target.checked)
+                    }
                     className="w-4 h-4 rounded"
                   />
                 </label>
@@ -335,12 +359,16 @@ export function ShortcutsSettings() {
                 <h3 className="font-semibold text-base">Transactions</h3>
                 <label className="flex items-center space-x-2 text-sm">
                   <span>
-                    {areSectionShortcutsEnabled("transactions") ? "✓ Enabled" : "✗ Disabled"}
+                    {areSectionShortcutsEnabled("transactions")
+                      ? "✓ Enabled"
+                      : "✗ Disabled"}
                   </span>
                   <input
                     type="checkbox"
                     checked={areSectionShortcutsEnabled("transactions")}
-                    onChange={(e) => toggleSectionShortcuts("transactions", e.target.checked)}
+                    onChange={(e) =>
+                      toggleSectionShortcuts("transactions", e.target.checked)
+                    }
                     className="w-4 h-4 rounded"
                   />
                 </label>

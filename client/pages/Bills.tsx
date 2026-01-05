@@ -148,13 +148,13 @@ export default function Bills() {
   >(null);
 
   // Template and Shortcuts
-  const { templates, saveTemplate, loadTemplate, deleteTemplate } = useTemplate();
+  const { templates, saveTemplate, loadTemplate, deleteTemplate } =
+    useTemplate();
   const { registerShortcutHandler, unregisterShortcutHandler } = useShortcuts();
   const [isSaveTemplateOpen, setIsSaveTemplateOpen] = useState(false);
   const [templateName, setTemplateName] = useState("");
   const [templateDescription, setTemplateDescription] = useState("");
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
-
 
   const handleDeleteBill = (billId: string) => {
     if (
@@ -208,7 +208,9 @@ export default function Bills() {
 
     if (validItems.length < editItems.length) {
       const removedCount = editItems.length - validItems.length;
-      alert(`${removedCount} item(s) with 0 price have been excluded from the bill.`);
+      alert(
+        `${removedCount} item(s) with 0 price have been excluded from the bill.`,
+      );
     }
 
     const updatedBill = {
@@ -254,7 +256,10 @@ export default function Bills() {
     if (index === 0) return;
     setEditItems((prev) => {
       const newItems = [...prev];
-      [newItems[index - 1], newItems[index]] = [newItems[index], newItems[index - 1]];
+      [newItems[index - 1], newItems[index]] = [
+        newItems[index],
+        newItems[index - 1],
+      ];
       return newItems;
     });
   };
@@ -263,7 +268,10 @@ export default function Bills() {
     if (index === editItems.length - 1) return;
     setEditItems((prev) => {
       const newItems = [...prev];
-      [newItems[index], newItems[index + 1]] = [newItems[index + 1], newItems[index]];
+      [newItems[index], newItems[index + 1]] = [
+        newItems[index + 1],
+        newItems[index],
+      ];
       return newItems;
     });
   };
@@ -271,7 +279,7 @@ export default function Bills() {
   // Helpers to enforce price constraints relative to base (MRP)
   const basePriceById = React.useMemo(() => {
     const map = new Map<number, number>();
-    stockItems.forEach((s: any) => map.set(s.id, (s.mrp ?? s.price)));
+    stockItems.forEach((s: any) => map.set(s.id, s.mrp ?? s.price));
     return map;
   }, [stockItems]);
   const clampToPriceBand = (id: number, price: number) => {
@@ -291,7 +299,10 @@ export default function Bills() {
     const desired = itemToAdd.customPrice
       ? parseFloat(itemToAdd.customPrice)
       : base;
-    const price = clampToPriceBand(stockItem.id, isNaN(desired) ? base : desired);
+    const price = clampToPriceBand(
+      stockItem.id,
+      isNaN(desired) ? base : desired,
+    );
 
     // Validate that price is greater than 0
     if (price <= 0) {
@@ -324,7 +335,10 @@ export default function Bills() {
           const updated = { ...item } as any;
           if (field === "price") {
             const numeric = parseFloat(value);
-            const clamped = clampToPriceBand(item.id, isNaN(numeric) ? item.price : numeric);
+            const clamped = clampToPriceBand(
+              item.id,
+              isNaN(numeric) ? item.price : numeric,
+            );
             // Ensure price is not 0
             updated.price = Math.max(clamped, 0.01);
           } else if (field === "quantity") {
@@ -343,7 +357,10 @@ export default function Bills() {
   };
 
   const { activeAccount } = useAccount();
-  const draftKey = React.useMemo(() => `createBillDraft_${activeAccount?.id || 'global'}`, [activeAccount?.id]);
+  const draftKey = React.useMemo(
+    () => `createBillDraft_${activeAccount?.id || "global"}`,
+    [activeAccount?.id],
+  );
 
   const resetCreateBillForm = () => {
     setSelectedItems([]);
@@ -356,7 +373,9 @@ export default function Bills() {
       additionalText: "",
     });
     setItemToAdd({ stockItemId: "", quantity: 1, customPrice: "" });
-    try { localStorage.removeItem(draftKey); } catch {}
+    try {
+      localStorage.removeItem(draftKey);
+    } catch {}
   };
 
   const switchMode = (mode: boolean) => {
@@ -455,7 +474,12 @@ export default function Bills() {
     try {
       localStorage.setItem(
         draftKey,
-        JSON.stringify({ newBill, selectedItems, manualMode, isCreateDialogOpen }),
+        JSON.stringify({
+          newBill,
+          selectedItems,
+          manualMode,
+          isCreateDialogOpen,
+        }),
       );
     } catch {}
   }, [newBill, selectedItems, manualMode, isCreateDialogOpen, draftKey]);
@@ -508,7 +532,8 @@ export default function Bills() {
         date: dateStr,
         customerName: pc || prev.customerName,
         targetTotal: pt || prev.targetTotal,
-        paymentMode: (pp === "Cash" || pp === "GPay") ? (pp as any) : prev.paymentMode,
+        paymentMode:
+          pp === "Cash" || pp === "GPay" ? (pp as any) : prev.paymentMode,
       }));
 
       if (auto && pt) {
@@ -531,7 +556,9 @@ export default function Bills() {
   useEffect(() => {
     if (isCreateDialogOpen && !newBill.billNumber.trim()) {
       // Calculate next bill number (highest existing + 1)
-      const maxExisting = bills.length ? Math.max(...bills.map((b) => b.billNumber)) : 1000;
+      const maxExisting = bills.length
+        ? Math.max(...bills.map((b) => b.billNumber))
+        : 1000;
       const nextBillNumber = (maxExisting + 1).toString();
 
       setNewBill((prev) => ({
@@ -575,7 +602,6 @@ export default function Bills() {
       setSearchTerm(decodeURIComponent(customerParam));
     }
   }, [searchParams, bills]);
-
 
   // Filter bills based on search and status
   const filteredBills = useMemo(() => {
@@ -621,12 +647,16 @@ export default function Bills() {
     // Also exclude items with 0 price
     let availableItems = stockToUse.filter(
       (item) =>
-        !previousItems.includes(item.name) && item.availableQuantity > 0 && item.price > 0,
+        !previousItems.includes(item.name) &&
+        item.availableQuantity > 0 &&
+        item.price > 0,
     );
 
     if (availableItems.length < 2) {
       // If not enough unique items available, use all available items with stock and price > 0
-      availableItems = stockToUse.filter((item) => item.availableQuantity > 0 && item.price > 0);
+      availableItems = stockToUse.filter(
+        (item) => item.availableQuantity > 0 && item.price > 0,
+      );
       console.log(
         `Not enough unique items, using all available items with stock: ${availableItems.length}`,
       );
@@ -637,11 +667,15 @@ export default function Bills() {
     }
 
     // Sort items by price and bias selection based on transaction value
-    const avgItemPrice = availableItems.reduce((sum, item) => sum + item.price, 0) / availableItems.length;
+    const avgItemPrice =
+      availableItems.reduce((sum, item) => sum + item.price, 0) /
+      availableItems.length;
 
     if (targetTotal >= 10000) {
       // For very high bills (10000+), select mostly high-priced items (80% high-priced)
-      const sortedByPrice = [...availableItems].sort((a, b) => b.price - a.price); // Descending
+      const sortedByPrice = [...availableItems].sort(
+        (a, b) => b.price - a.price,
+      ); // Descending
       const highPriceThreshold = Math.ceil(availableItems.length * 0.2);
       const selectedHigh = sortedByPrice.slice(0, highPriceThreshold);
       const selectedLow = sortedByPrice.slice(highPriceThreshold);
@@ -654,10 +688,14 @@ export default function Bills() {
         ...selectedHigh,
         ...selectedLow,
       ].slice(0, availableItems.length);
-      console.log("Very high bill (10000+): heavily biased toward high-priced items");
+      console.log(
+        "Very high bill (10000+): heavily biased toward high-priced items",
+      );
     } else if (targetTotal >= 5000) {
       // For high bills (5000-9999), select mostly high-priced items (60% high-priced)
-      const sortedByPrice = [...availableItems].sort((a, b) => b.price - a.price); // Descending
+      const sortedByPrice = [...availableItems].sort(
+        (a, b) => b.price - a.price,
+      ); // Descending
       const highPriceThreshold = Math.ceil(availableItems.length * 0.4);
       const selectedHigh = sortedByPrice.slice(0, highPriceThreshold);
       const selectedLow = sortedByPrice.slice(highPriceThreshold);
@@ -670,15 +708,24 @@ export default function Bills() {
         ...selectedLow,
         ...selectedLow,
       ].slice(0, availableItems.length);
-      console.log("High bill (5000-9999): biased toward high-priced items (60%)");
+      console.log(
+        "High bill (5000-9999): biased toward high-priced items (60%)",
+      );
     } else if (targetTotal >= 1000) {
       // For medium bills (1000-4999), balanced mix (40% high-priced)
-      const sortedByPrice = [...availableItems].sort((a, b) => b.price - a.price);
+      const sortedByPrice = [...availableItems].sort(
+        (a, b) => b.price - a.price,
+      );
       const highPriceThreshold = Math.ceil(availableItems.length * 0.6);
       const selectedHigh = sortedByPrice.slice(0, highPriceThreshold);
       const selectedLow = sortedByPrice.slice(highPriceThreshold);
 
-      availableItems = [...selectedHigh, ...selectedHigh, ...selectedLow, ...selectedLow].slice(0, availableItems.length);
+      availableItems = [
+        ...selectedHigh,
+        ...selectedHigh,
+        ...selectedLow,
+        ...selectedLow,
+      ].slice(0, availableItems.length);
       console.log("Medium bill (1000-4999): balanced mix");
     } else {
       // For small bills (< 1000), prefer lower-priced items
@@ -776,8 +823,12 @@ export default function Bills() {
         let bestQtyTotal = 0;
         // Cap max quantity at 25 to ensure balanced, human-like bills
         const maxQtyPerItem = 25;
-        const calculatedMaxQty = Math.ceil((targetTotal - currentTotal) / Math.max(1, item.price)) + 2;
-        const maxQty = Math.max(1, Math.min(item.availableQuantity, calculatedMaxQty, maxQtyPerItem));
+        const calculatedMaxQty =
+          Math.ceil((targetTotal - currentTotal) / Math.max(1, item.price)) + 2;
+        const maxQty = Math.max(
+          1,
+          Math.min(item.availableQuantity, calculatedMaxQty, maxQtyPerItem),
+        );
 
         for (let qty = 1; qty <= maxQty; qty++) {
           const itemCost = item.price * qty;
@@ -968,9 +1019,9 @@ export default function Bills() {
     const difference = targetTotal - bestMatch.total;
     if (Math.abs(difference) > 0 && availableItems.length > 0) {
       // Find low-priced items not already in the bill
-      const usedItemIds = new Set(bestMatch.items.map(item => item.id));
+      const usedItemIds = new Set(bestMatch.items.map((item) => item.id));
       const lowPricedItems = availableItems
-        .filter(item => !usedItemIds.has(item.id))
+        .filter((item) => !usedItemIds.has(item.id))
         .sort((a, b) => a.price - b.price);
 
       // Add up to 2 low-priced items to balance
@@ -1017,12 +1068,18 @@ export default function Bills() {
     // Also exclude items with 0 price
     let baseItems = stockItems.filter(
       (item) =>
-        item.availableQuantity > 0 && !previousItems.includes(item.itemName) && (item.price > 0 || (item as any).mrp > 0),
+        item.availableQuantity > 0 &&
+        !previousItems.includes(item.itemName) &&
+        (item.price > 0 || (item as any).mrp > 0),
     );
 
     if (baseItems.length < 2) {
       // If not enough unique items available, use all available items with price > 0
-      baseItems = stockItems.filter((item) => item.availableQuantity > 0 && (item.price > 0 || (item as any).mrp > 0));
+      baseItems = stockItems.filter(
+        (item) =>
+          item.availableQuantity > 0 &&
+          (item.price > 0 || (item as any).mrp > 0),
+      );
     }
 
     // Normalize to a local shape using unitPrice = mrp || price
@@ -1116,9 +1173,7 @@ export default function Bills() {
     // Step 3: Try to increase quantities of existing items if under target
     if (currentTotal < targetTotal - 20) {
       for (const billItem of selectedItems) {
-        if (
-          currentTotal + billItem.price <= targetTotal + 20
-        ) {
+        if (currentTotal + billItem.price <= targetTotal + 20) {
           const originalItem = stockItems.find(
             (item) => item.id === billItem.id,
           );
@@ -1234,7 +1289,11 @@ export default function Bills() {
     if (remaining !== 0 && adjustedItems.length > 0) {
       const increase = remaining > 0;
       // Distribute remaining across items, capped by ±5 per unit
-      for (let i = 0; i < adjustedItems.length && Math.abs(remaining) > 0.01; i++) {
+      for (
+        let i = 0;
+        i < adjustedItems.length && Math.abs(remaining) > 0.01;
+        i++
+      ) {
         const it = adjustedItems[i];
         const base = basePriceById.get(it.id) ?? it.price;
         const maxDeltaPerUnit = 5;
@@ -1281,12 +1340,22 @@ export default function Bills() {
           if (!applied && adjustedItems.length < 7) {
             // Add a cheapest new item if possible
             const candidates = stockItems
-              .filter((s) => s.availableQuantity > 0 && !adjustedItems.some((ai) => ai.id === s.id))
+              .filter(
+                (s) =>
+                  s.availableQuantity > 0 &&
+                  !adjustedItems.some((ai) => ai.id === s.id),
+              )
               .sort((a, b) => (a.mrp ?? a.price) - (b.mrp ?? b.price));
             if (candidates.length > 0) {
               const s = candidates[0] as any;
-              const price = clampToPriceBand(s.id, (s.mrp ?? s.price));
-              adjustedItems.push({ id: s.id, name: s.itemName, price, quantity: 1, total: price });
+              const price = clampToPriceBand(s.id, s.mrp ?? s.price);
+              adjustedItems.push({
+                id: s.id,
+                name: s.itemName,
+                price,
+                quantity: 1,
+                total: price,
+              });
               applied = true;
             }
           }
@@ -1328,7 +1397,9 @@ export default function Bills() {
 
   const handleCreateBill = () => {
     if (selectedItems.length === 0) {
-      alert("No items selected. Please auto-generate or add items manually first.");
+      alert(
+        "No items selected. Please auto-generate or add items manually first.",
+      );
       return;
     }
 
@@ -1342,10 +1413,14 @@ export default function Bills() {
 
     if (validItems.length < selectedItems.length) {
       const removedCount = selectedItems.length - validItems.length;
-      alert(`${removedCount} item(s) with 0 price have been excluded from the bill.`);
+      alert(
+        `${removedCount} item(s) with 0 price have been excluded from the bill.`,
+      );
     }
 
-    const summary = validItems.map((i) => `• ${i.name} x ${i.quantity}`).join("\n");
+    const summary = validItems
+      .map((i) => `• ${i.name} x ${i.quantity}`)
+      .join("\n");
     const proceed = confirm(
       `This will deduct stock for:\n\n${summary}\n\nProceed to create bill and update stock?`,
     );
@@ -1354,7 +1429,9 @@ export default function Bills() {
     const paymentMode = getPaymentMode(newBill.customerName);
     const displayName = cleanCustomerName(newBill.customerName);
 
-    const maxExisting = bills.length ? Math.max(...bills.map((b) => b.billNumber)) : 1000;
+    const maxExisting = bills.length
+      ? Math.max(...bills.map((b) => b.billNumber))
+      : 1000;
     const billNumber = parseInt(newBill.billNumber) || maxExisting + 1;
 
     const targetTotal = parseFloat(newBill.targetTotal) || 0;
@@ -1373,8 +1450,11 @@ export default function Bills() {
       expectedTotal: targetTotal > 0 ? targetTotal : generatedTotal, // Expected = target if provided
       paymentMode,
       status: "draft",
-      difference: (targetTotal > 0 ? targetTotal : generatedTotal) - generatedTotal, // Positive => Under
-      tolerance: Math.abs((targetTotal > 0 ? targetTotal : generatedTotal) - generatedTotal),
+      difference:
+        (targetTotal > 0 ? targetTotal : generatedTotal) - generatedTotal, // Positive => Under
+      tolerance: Math.abs(
+        (targetTotal > 0 ? targetTotal : generatedTotal) - generatedTotal,
+      ),
       headerInfo: {
         agencyName: "Sadhana Agency",
         address: "Harsila (Dewalchaura), Bageshwar, Uttarakhand",
@@ -1408,7 +1488,9 @@ export default function Bills() {
     setSelectedItems([]);
     setIsCreateDialogOpen(false);
     setActiveTab("view");
-    try { localStorage.removeItem(draftKey); } catch {}
+    try {
+      localStorage.removeItem(draftKey);
+    } catch {}
   };
 
   // Register shortcut handlers for Bills page
@@ -1446,7 +1528,16 @@ export default function Bills() {
     return () => {
       unregisterShortcutHandler("bills");
     };
-  }, [selectedItems, newBill, manualMode, itemToAdd, registerShortcutHandler, unregisterShortcutHandler, handleCreateBill, addManualItem]);
+  }, [
+    selectedItems,
+    newBill,
+    manualMode,
+    itemToAdd,
+    registerShortcutHandler,
+    unregisterShortcutHandler,
+    handleCreateBill,
+    addManualItem,
+  ]);
 
   // Generate HTML for single bill
   const generateBillHTML = async (bill: any) => {
@@ -2627,7 +2718,11 @@ export default function Bills() {
     let generatedBills = bills.filter((b) => b.status === "generated");
 
     // Apply date filter if enabled
-    if (megaReportOptions.filterByDate && megaReportOptions.fromDate && megaReportOptions.toDate) {
+    if (
+      megaReportOptions.filterByDate &&
+      megaReportOptions.fromDate &&
+      megaReportOptions.toDate
+    ) {
       generatedBills = generatedBills.filter((bill) => {
         const billDate = new Date(bill.date.split("-").reverse().join("-"));
         const fromDate = new Date(megaReportOptions.fromDate);
@@ -2711,9 +2806,12 @@ export default function Bills() {
       });
 
       XLSX.utils.book_append_sheet(workbook, worksheet, "Mega Report");
-      const dateRange = megaReportOptions.filterByDate && megaReportOptions.fromDate && megaReportOptions.toDate
-        ? `_${megaReportOptions.fromDate}_to_${megaReportOptions.toDate}`
-        : "";
+      const dateRange =
+        megaReportOptions.filterByDate &&
+        megaReportOptions.fromDate &&
+        megaReportOptions.toDate
+          ? `_${megaReportOptions.fromDate}_to_${megaReportOptions.toDate}`
+          : "";
       XLSX.writeFile(
         workbook,
         `Mega_Report${dateRange}_${new Date().toISOString().split("T")[0]}.xlsx`,
@@ -2721,10 +2819,7 @@ export default function Bills() {
     } else {
       // PDF export using HTML
       const totalSum = parseFloat(
-        generatedBills.reduce(
-          (sum, bill) => sum + bill.subTotal,
-          0,
-        ).toFixed(2)
+        generatedBills.reduce((sum, bill) => sum + bill.subTotal, 0).toFixed(2),
       );
       const htmlContent = `
         <!DOCTYPE html>
@@ -2839,7 +2934,7 @@ export default function Bills() {
           <div class="report-info">
             <p><strong>Report Generated:</strong> ${new Date().toLocaleDateString()}</p>
             <p><strong>Total Bills:</strong> ${generatedBills.length}</p>
-            <p><strong>Period:</strong> ${megaReportOptions.filterByDate && megaReportOptions.fromDate && megaReportOptions.toDate ? `${megaReportOptions.fromDate} to ${megaReportOptions.toDate}` : (generatedBills.length > 0 ? `${generatedBills[0].date} to ${generatedBills[generatedBills.length - 1].date}` : "N/A")}</p>
+            <p><strong>Period:</strong> ${megaReportOptions.filterByDate && megaReportOptions.fromDate && megaReportOptions.toDate ? `${megaReportOptions.fromDate} to ${megaReportOptions.toDate}` : generatedBills.length > 0 ? `${generatedBills[0].date} to ${generatedBills[generatedBills.length - 1].date}` : "N/A"}</p>
           </div>
 
           <table class="report-table">
@@ -3492,7 +3587,8 @@ export default function Bills() {
                             • Generated total exactly matches target amount
                           </li>
                           <li>
-                            • Maximum 7 items per bill; quantity adjusts as needed
+                            • Maximum 7 items per bill; quantity adjusts as
+                            needed
                           </li>
                         </ul>
                       </div>
@@ -3540,8 +3636,8 @@ export default function Bills() {
                                         {item.itemName}
                                       </span>
                                       <span className="text-sm text-muted-foreground">
-                                        ��{Number(item.price).toFixed(2)} • Stock:{" "}
-                                        {item.availableQuantity}{" "}
+                                        ��{Number(item.price).toFixed(2)} •
+                                        Stock: {item.availableQuantity}{" "}
                                         {item.blocked && "• (Blocked)"}
                                       </span>
                                     </div>
@@ -3650,47 +3746,49 @@ export default function Bills() {
                             {selectedItems.map((item, index) => {
                               if (item.total <= 0) return null;
                               return (
-                              <tr key={index} className="border-b">
-                                <td className="p-3">{item.name}</td>
-                                <td className="p-3">
-                                  <Input
-                                    type="number"
-                                    value={item.quantity}
-                                    onChange={(e) =>
-                                      updateSelectedItem(
-                                        index,
-                                        "quantity",
-                                        parseInt(e.target.value) || 0,
-                                      )
-                                    }
-                                    className="w-20"
-                                  />
-                                </td>
-                                <td className="p-3">
-                                  <Input
-                                    type="number"
-                                    value={Number(item.price).toFixed(2)}
-                                    onChange={(e) =>
-                                      updateSelectedItem(
-                                        index,
-                                        "price",
-                                        parseFloat(e.target.value) || 0,
-                                      )
-                                    }
-                                    className="w-24"
-                                  />
-                                </td>
-                                <td className="p-3">��{Number(item.total).toFixed(2)}</td>
-                                <td className="p-3">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => removeSelectedItem(index)}
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </td>
-                              </tr>
+                                <tr key={index} className="border-b">
+                                  <td className="p-3">{item.name}</td>
+                                  <td className="p-3">
+                                    <Input
+                                      type="number"
+                                      value={item.quantity}
+                                      onChange={(e) =>
+                                        updateSelectedItem(
+                                          index,
+                                          "quantity",
+                                          parseInt(e.target.value) || 0,
+                                        )
+                                      }
+                                      className="w-20"
+                                    />
+                                  </td>
+                                  <td className="p-3">
+                                    <Input
+                                      type="number"
+                                      value={Number(item.price).toFixed(2)}
+                                      onChange={(e) =>
+                                        updateSelectedItem(
+                                          index,
+                                          "price",
+                                          parseFloat(e.target.value) || 0,
+                                        )
+                                      }
+                                      className="w-24"
+                                    />
+                                  </td>
+                                  <td className="p-3">
+                                    ��{Number(item.total).toFixed(2)}
+                                  </td>
+                                  <td className="p-3">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => removeSelectedItem(index)}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </td>
+                                </tr>
                               );
                             })}
                           </tbody>
@@ -3786,14 +3884,18 @@ export default function Bills() {
                                   <Button
                                     size="sm"
                                     variant="ghost"
-                                    onClick={() => handleLoadTemplate(template.id)}
+                                    onClick={() =>
+                                      handleLoadTemplate(template.id)
+                                    }
                                   >
                                     <Copy className="h-3 w-3" />
                                   </Button>
                                   <Button
                                     size="sm"
                                     variant="ghost"
-                                    onClick={() => handleDeleteTemplate(template.id)}
+                                    onClick={() =>
+                                      handleDeleteTemplate(template.id)
+                                    }
                                   >
                                     <Trash2 className="h-3 w-3 text-red-500" />
                                   </Button>
@@ -3893,8 +3995,12 @@ export default function Bills() {
                               <tr key={index} className="border-b">
                                 <td className="p-3">{item.name}</td>
                                 <td className="p-3">{item.quantity}</td>
-                                <td className="p-3">₹{Number(item.price).toFixed(2)}</td>
-                                <td className="p-3">₹{Number(item.total).toFixed(2)}</td>
+                                <td className="p-3">
+                                  ₹{Number(item.price).toFixed(2)}
+                                </td>
+                                <td className="p-3">
+                                  ₹{Number(item.total).toFixed(2)}
+                                </td>
                               </tr>
                             ))}
                           </tbody>
@@ -4019,7 +4125,9 @@ export default function Bills() {
                                     className="w-24"
                                   />
                                 </td>
-                                <td className="p-3">���{Number(item.total).toFixed(2)}</td>
+                                <td className="p-3">
+                                  ���{Number(item.total).toFixed(2)}
+                                </td>
                                 <td className="p-3">
                                   <div className="flex space-x-1">
                                     <Button
@@ -4275,7 +4383,9 @@ export default function Bills() {
                   {megaReportOptions.filterByDate && (
                     <div className="space-y-2">
                       <div>
-                        <Label htmlFor="fromDate" className="text-sm">From Date</Label>
+                        <Label htmlFor="fromDate" className="text-sm">
+                          From Date
+                        </Label>
                         <Input
                           id="fromDate"
                           type="date"
@@ -4289,7 +4399,9 @@ export default function Bills() {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="toDate" className="text-sm">To Date</Label>
+                        <Label htmlFor="toDate" className="text-sm">
+                          To Date
+                        </Label>
                         <Input
                           id="toDate"
                           type="date"
@@ -4496,7 +4608,10 @@ export default function Bills() {
             </Dialog>
 
             {/* Save as Template Dialog */}
-            <Dialog open={isSaveTemplateOpen} onOpenChange={setIsSaveTemplateOpen}>
+            <Dialog
+              open={isSaveTemplateOpen}
+              onOpenChange={setIsSaveTemplateOpen}
+            >
               <DialogContent className="max-w-md">
                 <DialogHeader>
                   <DialogTitle>Save as Template</DialogTitle>
@@ -4526,7 +4641,9 @@ export default function Bills() {
                     />
                   </div>
                   <div className="bg-muted/30 p-3 rounded-lg">
-                    <h4 className="font-medium mb-2 text-sm">Template Preview</h4>
+                    <h4 className="font-medium mb-2 text-sm">
+                      Template Preview
+                    </h4>
                     <div className="text-xs space-y-1">
                       <div className="flex justify-between">
                         <span>Items:</span>
@@ -4534,7 +4651,12 @@ export default function Bills() {
                       </div>
                       <div className="flex justify-between">
                         <span>Total Value:</span>
-                        <span>₹{selectedItems.reduce((sum, item) => sum + item.total, 0).toFixed(2)}</span>
+                        <span>
+                          ₹
+                          {selectedItems
+                            .reduce((sum, item) => sum + item.total, 0)
+                            .toFixed(2)}
+                        </span>
                       </div>
                     </div>
                   </div>

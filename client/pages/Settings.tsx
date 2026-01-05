@@ -803,7 +803,9 @@ export default function Settings() {
                         Dark Mode (Night Mode)
                       </Label>
                       <p className="text-sm text-muted-foreground">
-                        {isDarkMode ? "Dark mode is currently enabled" : "Light mode is currently active"}
+                        {isDarkMode
+                          ? "Dark mode is currently enabled"
+                          : "Light mode is currently active"}
                       </p>
                     </div>
                     <Switch

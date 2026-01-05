@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 import { useNavigate } from "react-router-dom";
 
 export interface Shortcut {
@@ -16,7 +22,10 @@ interface ShortcutsContextType {
   updateShortcut: (id: string, key: string, enabled: boolean) => void;
   resetShortcuts: () => void;
   getShortcutsBySection: (section: string) => Shortcut[];
-  registerShortcutHandler: (section: string, handler: (key: string) => void) => void;
+  registerShortcutHandler: (
+    section: string,
+    handler: (key: string) => void,
+  ) => void;
   unregisterShortcutHandler: (section: string) => void;
   toggleAllShortcuts: (enabled: boolean) => void;
   toggleSectionShortcuts: (section: string, enabled: boolean) => void;
@@ -24,7 +33,9 @@ interface ShortcutsContextType {
   areSectionShortcutsEnabled: (section: string) => boolean;
 }
 
-const ShortcutsContext = createContext<ShortcutsContextType | undefined>(undefined);
+const ShortcutsContext = createContext<ShortcutsContextType | undefined>(
+  undefined,
+);
 
 const DEFAULT_SHORTCUTS: Shortcut[] = [
   // Global shortcuts
@@ -173,7 +184,9 @@ const DEFAULT_SHORTCUTS: Shortcut[] = [
 
 export function ShortcutsProvider({ children }: { children: React.ReactNode }) {
   const [shortcuts, setShortcuts] = useState<Shortcut[]>(DEFAULT_SHORTCUTS);
-  const [handlerMap, setHandlerMap] = useState<Map<string, (key: string) => void>>(new Map());
+  const [handlerMap, setHandlerMap] = useState<
+    Map<string, (key: string) => void>
+  >(new Map());
   const navigate = useNavigate();
 
   // Load shortcuts from localStorage on mount and merge with defaults
@@ -286,10 +299,8 @@ export function ShortcutsProvider({ children }: { children: React.ReactNode }) {
   const updateShortcut = (id: string, key: string, enabled: boolean) => {
     setShortcuts((prev) =>
       prev.map((s) =>
-        s.id === id
-          ? { ...s, key: key.toLowerCase(), enabled }
-          : s
-      )
+        s.id === id ? { ...s, key: key.toLowerCase(), enabled } : s,
+      ),
     );
   };
 
@@ -305,7 +316,7 @@ export function ShortcutsProvider({ children }: { children: React.ReactNode }) {
     (section: string, handler: (action: string) => void) => {
       setHandlerMap((prev) => new Map(prev).set(section, handler));
     },
-    []
+    [],
   );
 
   const unregisterShortcutHandler = useCallback((section: string) => {
@@ -317,16 +328,12 @@ export function ShortcutsProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const toggleAllShortcuts = (enabled: boolean) => {
-    setShortcuts((prev) =>
-      prev.map((s) => ({ ...s, enabled }))
-    );
+    setShortcuts((prev) => prev.map((s) => ({ ...s, enabled })));
   };
 
   const toggleSectionShortcuts = (section: string, enabled: boolean) => {
     setShortcuts((prev) =>
-      prev.map((s) =>
-        s.section === section ? { ...s, enabled } : s
-      )
+      prev.map((s) => (s.section === section ? { ...s, enabled } : s)),
     );
   };
 
@@ -336,7 +343,9 @@ export function ShortcutsProvider({ children }: { children: React.ReactNode }) {
 
   const areSectionShortcutsEnabled = (section: string) => {
     const sectionShortcuts = shortcuts.filter((s) => s.section === section);
-    return sectionShortcuts.length > 0 && sectionShortcuts.every((s) => s.enabled);
+    return (
+      sectionShortcuts.length > 0 && sectionShortcuts.every((s) => s.enabled)
+    );
   };
 
   return (

@@ -401,7 +401,11 @@ export default function Stock() {
           break;
         case "add_stock":
           // Trigger add stock if quick add dialog is open and item is selected
-          if (isQuickAddOpen && quickAddData.itemPrefix && quickAddData.quantity) {
+          if (
+            isQuickAddOpen &&
+            quickAddData.itemPrefix &&
+            quickAddData.quantity
+          ) {
             handleQuickAdd();
           }
           break;
@@ -413,7 +417,13 @@ export default function Stock() {
     return () => {
       unregisterShortcutHandler("stock");
     };
-  }, [isQuickAddOpen, quickAddData, registerShortcutHandler, unregisterShortcutHandler, handleQuickAdd]);
+  }, [
+    isQuickAddOpen,
+    quickAddData,
+    registerShortcutHandler,
+    unregisterShortcutHandler,
+    handleQuickAdd,
+  ]);
 
   const saveEdit = () => {
     if (editingId === null) return;

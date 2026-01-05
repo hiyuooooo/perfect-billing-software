@@ -6,7 +6,9 @@ interface DarkModeContextType {
   setDarkMode: (enabled: boolean) => void;
 }
 
-const DarkModeContext = createContext<DarkModeContextType | undefined>(undefined);
+const DarkModeContext = createContext<DarkModeContextType | undefined>(
+  undefined,
+);
 
 export function DarkModeProvider({ children }: { children: React.ReactNode }) {
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -18,7 +20,9 @@ export function DarkModeProvider({ children }: { children: React.ReactNode }) {
       setIsDarkMode(JSON.parse(saved));
     } else {
       // Default to system preference if available
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const prefersDark = window.matchMedia(
+        "(prefers-color-scheme: dark)",
+      ).matches;
       setIsDarkMode(prefersDark);
     }
   }, []);
@@ -42,7 +46,9 @@ export function DarkModeProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <DarkModeContext.Provider value={{ isDarkMode, toggleDarkMode, setDarkMode }}>
+    <DarkModeContext.Provider
+      value={{ isDarkMode, toggleDarkMode, setDarkMode }}
+    >
       {children}
     </DarkModeContext.Provider>
   );
