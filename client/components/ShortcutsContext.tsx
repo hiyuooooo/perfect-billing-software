@@ -197,14 +197,26 @@ export function ShortcutsProvider({ children }: { children: React.ReactNode }) {
   // Global keyboard event listener
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Don't trigger shortcuts when typing in input fields
+      // Don't trigger shortcuts when typing in input fields or editing content
       const target = event.target as HTMLElement;
-      if (
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.contentEditable === "true"
-      ) {
+
+      // Check if target is an input or textarea
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") {
         return;
+      }
+
+      // Check if target is a contenteditable element
+      if (target.contentEditable === "true") {
+        return;
+      }
+
+      // Check if any parent element is contenteditable
+      let current = target as HTMLElement | null;
+      while (current) {
+        if (current.contentEditable === "true") {
+          return;
+        }
+        current = current.parentElement;
       }
 
       const key = event.key.toLowerCase();
