@@ -15,6 +15,7 @@ import { CustomerProvider } from "@/components/CustomerContext";
 import { IterationMonitorProvider } from "@/components/IterationMonitor";
 import { TemplateProvider } from "@/components/TemplateContext";
 import { ShortcutsProvider } from "@/components/ShortcutsContext";
+import { DarkModeProvider } from "@/components/DarkModeContext";
 import { useState } from "react";
 import Login from "./pages/Login";
 import Index from "./pages/Index";
