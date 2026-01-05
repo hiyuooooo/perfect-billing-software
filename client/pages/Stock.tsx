@@ -413,7 +413,7 @@ export default function Stock() {
     return () => {
       unregisterShortcutHandler("stock");
     };
-  }, [isQuickAddOpen, quickAddData, registerShortcutHandler, unregisterShortcutHandler, handleQuickAdd])
+  }, [isQuickAddOpen, quickAddData, registerShortcutHandler, unregisterShortcutHandler, handleQuickAdd]);
 
   const saveEdit = () => {
     if (editingId === null) return;
