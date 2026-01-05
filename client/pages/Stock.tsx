@@ -395,6 +395,10 @@ export default function Stock() {
   useEffect(() => {
     const handleStockShortcut = (action: string) => {
       switch (action) {
+        case "quick_add_stock":
+          // Open Quick Add Stock dialog
+          setIsQuickAddOpen(true);
+          break;
         case "add_stock":
           // Trigger add stock if quick add dialog is open and item is selected
           if (isQuickAddOpen && quickAddData.itemPrefix && quickAddData.quantity) {
@@ -409,7 +413,7 @@ export default function Stock() {
     return () => {
       unregisterShortcutHandler("stock");
     };
-  }, [isQuickAddOpen, quickAddData, registerShortcutHandler, unregisterShortcutHandler, handleQuickAdd]);
+  }, [isQuickAddOpen, quickAddData, registerShortcutHandler, unregisterShortcutHandler, handleQuickAdd])
 
   const saveEdit = () => {
     if (editingId === null) return;
