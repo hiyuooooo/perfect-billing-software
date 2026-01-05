@@ -52,7 +52,8 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AccountProvider>
+        <DarkModeProvider>
+          <AccountProvider>
           <CustomerProvider>
             <StockProvider>
               <TransactionProvider>
@@ -97,7 +98,8 @@ const App = () => {
               </TransactionProvider>
             </StockProvider>
           </CustomerProvider>
-        </AccountProvider>
+          </AccountProvider>
+        </DarkModeProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
