@@ -17,6 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAccount, AccountSelector } from "./AccountManager";
 import { Button } from "./ui/button";
+import { ShortcutsSettings } from "./ShortcutsSettings";
 import {
   Dialog,
   DialogContent,
@@ -189,6 +190,12 @@ export function Layout({ children }: LayoutProps) {
               );
             })}
           </nav>
+          <div className="border-t p-4 space-y-2">
+            <div className="text-xs font-semibold text-muted-foreground mb-3">
+              TOOLS
+            </div>
+            <ShortcutsSettings />
+          </div>
         </aside>
 
         {/* Main content */}

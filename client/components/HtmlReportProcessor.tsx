@@ -29,6 +29,7 @@ import { HtmlProcessor, demonstratePythonWorkflow } from "@/lib/htmlProcessor";
 export default function HtmlReportProcessor() {
   const { bills } = useBill();
   const { activeAccount } = useAccount();
+  const [dateFilter, setDateFilter] = useState({ from: "", to: "" });
 
   // Load saved settings from localStorage or use empty defaults
   const [headerConfig, setHeaderConfig] = useState(() => {
@@ -97,6 +98,7 @@ export default function HtmlReportProcessor() {
   });
 
   const [processedHtml, setProcessedHtml] = useState("");
+  const [filterApplied, setFilterApplied] = useState(false);
 
   // Save header config to localStorage whenever it changes
   useEffect(() => {
@@ -121,6 +123,11 @@ export default function HtmlReportProcessor() {
       }
     }
   }, [footerConfig, activeAccount]);
+
+  // Reset filter applied status when date filter changes
+  useEffect(() => {
+    setFilterApplied(false);
+  }, [dateFilter]);
 
   // Load settings when account changes
   useEffect(() => {
@@ -172,6 +179,45 @@ export default function HtmlReportProcessor() {
   };
 
   const generateBaseHtmlReport = (): string => {
+    let list = bills;
+    let lowestBillNumber = undefined;
+    let highestBillNumber = undefined;
+
+    // If from date is specified, find lowest bill number on that date
+    if (dateFilter.from) {
+      const fromDate = new Date(dateFilter.from);
+      const billsOnFromDate = bills.filter((bill) => {
+        const billDate = new Date(bill.date.split("-").reverse().join("-"));
+        return billDate.toDateString() === fromDate.toDateString();
+      });
+      if (billsOnFromDate.length > 0) {
+        lowestBillNumber = Math.min(...billsOnFromDate.map((b) => b.billNumber));
+      }
+    }
+
+    // If to date is specified, find highest bill number on that date
+    if (dateFilter.to) {
+      const toDate = new Date(dateFilter.to);
+      const billsOnToDate = bills.filter((bill) => {
+        const billDate = new Date(bill.date.split("-").reverse().join("-"));
+        return billDate.toDateString() === toDate.toDateString();
+      });
+      if (billsOnToDate.length > 0) {
+        highestBillNumber = Math.max(...billsOnToDate.map((b) => b.billNumber));
+      }
+    }
+
+    // Filter bills by bill number range and sort by bill number
+    list = bills.filter((bill) => {
+      if (lowestBillNumber !== undefined && bill.billNumber < lowestBillNumber)
+        return false;
+      if (highestBillNumber !== undefined && bill.billNumber > highestBillNumber)
+        return false;
+      return true;
+    });
+
+    // Sort by bill number ascending
+    list.sort((a, b) => a.billNumber - b.billNumber);
     return `
       <!DOCTYPE html>
       <html>
@@ -204,9 +250,21 @@ export default function HtmlReportProcessor() {
           <!-- Header info will be added by processor -->
         </div>
 
-        ${bills
+        ${list
           .map(
-            (bill, index) => `
+            (bill, index) => {
+              // Filter out items with zero rate or zero amount
+              const validItems = bill.items.filter((item) => item.price > 0 && item.total > 0);
+
+              // Calculate sub total from valid items only
+              const billSubTotal = validItems.reduce((sum, item) => sum + item.total, 0);
+
+              // Skip bills with no valid items
+              if (validItems.length === 0) {
+                return "";
+              }
+
+              return `
           <div class="bill-section">
             <div class="bill-header">
               <h4>Bill No: ${bill.billNumber} | Customer: ${bill.customerName} | Date: ${bill.date} | Payment: ${bill.paymentMode}</h4>
@@ -223,7 +281,7 @@ export default function HtmlReportProcessor() {
                 </tr>
               </thead>
               <tbody>
-                ${bill.items
+                ${validItems
                   .map(
                     (item, itemIndex) => `
                   <tr>
@@ -240,19 +298,28 @@ export default function HtmlReportProcessor() {
               <tfoot>
                 <tr class="total-row">
                   <td colspan="4">Sub Total:</td>
-                  <td>₹${bill.subTotal}</td>
+                  <td>₹${billSubTotal}</td>
                 </tr>
               </tfoot>
             </table>
           </div>
-        `,
+        `;
+            }
           )
           .join("")}
 
         <div class="grand-total">
-          <div>TOTAL SALES: ₹${bills.reduce((sum, bill) => sum + bill.subTotal, 0).toLocaleString()}</div>
+          <div>TOTAL SALES: ₹${list
+            .reduce((sum, bill) => {
+              const validItems = bill.items.filter((item) => item.price > 0 && item.total > 0);
+              return sum + validItems.reduce((billSum, item) => billSum + item.total, 0);
+            }, 0)
+            .toLocaleString()}</div>
           <div style="font-size: 14px; margin-top: 10px;">
-            Total Bills: ${bills.length} | Total Items: ${bills.reduce((sum, bill) => sum + bill.items.length, 0)}
+            Total Bills: ${list.filter((bill) => bill.items.some((item) => item.price > 0 && item.total > 0)).length} | Total Items: ${list.reduce((sum, bill) => {
+              const validItems = bill.items.filter((item) => item.price > 0 && item.total > 0);
+              return sum + validItems.length;
+            }, 0)}
           </div>
         </div>
       </body>
@@ -272,6 +339,7 @@ export default function HtmlReportProcessor() {
       const baseHtml = generateBaseHtmlReport();
       const processed = processHtmlContent(baseHtml);
       setProcessedHtml(processed);
+      setFilterApplied(true);
 
       console.log("HTML report processed successfully!");
     } catch (error) {
@@ -367,6 +435,36 @@ export default function HtmlReportProcessor() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="space-y-2">
+              <Label>From Date</Label>
+              <Input
+                type="date"
+                value={dateFilter.from}
+                onChange={(e) => setDateFilter((p) => ({ ...p, from: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>To Date</Label>
+              <Input
+                type="date"
+                value={dateFilter.to}
+                onChange={(e) => setDateFilter((p) => ({ ...p, to: e.target.value }))}
+              />
+            </div>
+            <div className="flex items-end">
+              <Button
+                onClick={handleProcessReport}
+                className={
+                  filterApplied
+                    ? "bg-green-600 hover:bg-green-700 text-white"
+                    : ""
+                }
+              >
+                Apply Filter
+              </Button>
+            </div>
+          </div>
           <Tabs defaultValue="header" className="space-y-4">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="header">Header Config</TabsTrigger>

@@ -24,7 +24,10 @@ import {
   Filter,
   Eye,
   Code,
+  Wand2,
 } from "lucide-react";
+import { Copy, Send, X } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
@@ -32,6 +35,7 @@ import html2canvas from "html2canvas";
 import { useBill } from "@/components/BillContext";
 import { useAccount } from "@/components/AccountManager";
 import { Switch } from "@/components/ui/switch";
+import { useStock } from "@/components/StockContext";
 
 // Mock data for reports
 const mockBillReports = [
@@ -167,7 +171,8 @@ export default function Reports() {
     to: "",
   });
   const [includeGST, setIncludeGST] = useState(false);
-  const { bills } = useBill();
+  const { bills, deleteBill, generateBillsFromTransactions } = useBill();
+  const { getUnblockedStock, reduceStock, restoreStock } = useStock();
   const { activeAccount } = useAccount();
   const navigate = useNavigate();
 
@@ -180,6 +185,157 @@ export default function Reports() {
   const mismatchReports = useMemo(() => {
     return bills.filter((bill) => Math.abs(bill.difference) > 20);
   }, [bills]);
+
+  const fixMismatch = async (bill: any) => {
+    try {
+      const transaction = {
+        id: `AUTOFIX-${bill.id}`,
+        date: bill.date,
+        customerName: bill.customerName,
+        total: bill.expectedTotal,
+        paymentMode: bill.paymentMode,
+      };
+
+      // Delete the original mismatched bill (restore its stock)
+      deleteBill(bill.id, { restoreStock });
+
+      // Generate corrected bill using expected as target and same bill number
+      const availableStock = getUnblockedStock();
+      await generateBillsFromTransactions(
+        [transaction],
+        bill.billNumber,
+        [],
+        availableStock,
+        reduceStock,
+      );
+    } catch (e) {
+      console.error("Auto-fix failed:", e);
+      alert("Auto-fix failed. Check console for details.");
+    }
+  };
+
+  const copyMismatchData = async (bill: any, andDelete = false) => {
+    const text = `Bill No: ${bill.billNumber}\nCustomer: ${bill.customerName}\nDate: ${bill.date}\nExpected: ${bill.expectedTotal}`;
+
+    const fallbackCopy = (t: string) => {
+      try {
+        const textarea = document.createElement("textarea");
+        textarea.value = t;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        textarea.style.left = "-9999px";
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        const ok = document.execCommand("copy");
+        document.body.removeChild(textarea);
+        return ok;
+      } catch {
+        return false;
+      }
+    };
+
+    const downloadText = (t: string, filename: string) => {
+      const blob = new Blob([t], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    };
+
+    let copied = false;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        copied = true;
+      }
+    } catch (e) {
+      console.warn("Primary clipboard failed, trying fallback copy:", e);
+    }
+
+    if (!copied) {
+      copied = fallbackCopy(text);
+    }
+
+    if (!copied) {
+      downloadText(text, `bill_${bill.billNumber}_mismatch.txt`);
+      alert(
+        "Clipboard is blocked by browser policy. Downloaded a text file instead.",
+      );
+    }
+
+    if (andDelete) {
+      const confirmed = confirm(
+        `Delete bill #${bill.billNumber} ${copied ? "after copying" : "after downloading"}? This cannot be undone.`,
+      );
+      if (!confirmed) {
+        alert(
+          copied
+            ? "Copy kept. Bill not deleted."
+            : "File kept. Bill not deleted.",
+        );
+        return;
+      }
+      deleteBill(bill.id, { restoreStock });
+      alert(
+        copied
+          ? "Copied and deleted bill."
+          : "Downloaded and deleted bill info.",
+      );
+      return;
+    }
+
+    if (copied) {
+      alert("Copied to clipboard.");
+    }
+  };
+
+  const sendToBills = (bill: any, deleteAfter = false) => {
+    // Force-save all account data to localStorage before navigation
+    try {
+      if (activeAccount?.id) {
+        window.dispatchEvent(
+          new CustomEvent("force-save-account-data", {
+            detail: { accountId: activeAccount.id },
+          }),
+        );
+      }
+    } catch {}
+
+    const params = new URLSearchParams({
+      prefillBill: String(bill.billNumber),
+      prefillCustomer: bill.customerName,
+      prefillDate: bill.date,
+      prefillTarget: String(bill.expectedTotal),
+      prefillPayment: bill.paymentMode || "GPay",
+      prefillAuto: "true",
+      prefillSubmit: "false",
+    });
+
+    if (deleteAfter) {
+      const confirmed = confirm(
+        `Also delete mismatch bill #${bill.billNumber} after sending to Bills? Stock will be restored.`,
+      );
+      if (confirmed) {
+        deleteBill(bill.id, { restoreStock });
+      }
+    }
+
+    // Use SPA navigation to avoid full reload which could drop volatile state
+    navigate(`/bills?${params.toString()}`);
+  };
+
+  const fixAllMismatches = async () => {
+    const snapshot = [...mismatchReports];
+    for (const b of snapshot) {
+      await fixMismatch(b);
+    }
+    alert("Auto-fix completed for all mismatches.");
+  };
 
   const filteredBillReports = useMemo(() => {
     return bills.filter((bill) => {
@@ -323,6 +479,21 @@ export default function Reports() {
         console.warn("Could not load invoice settings for mega report:", error);
       }
     }
+    const list = bills.filter((bill) => {
+      if (!dateFilter.from && !dateFilter.to) return true;
+      const billDate = new Date(bill.date.split("-").reverse().join("-"));
+      if (dateFilter.from) {
+        const from = new Date(dateFilter.from);
+        if (billDate < from) return false;
+      }
+      if (dateFilter.to) {
+        const to = new Date(dateFilter.to);
+        to.setHours(23, 59, 59, 999);
+        if (billDate > to) return false;
+      }
+      return true;
+    });
+
     return `
       <!DOCTYPE html>
       <html>
@@ -354,7 +525,7 @@ export default function Reports() {
           ${invoiceSettings?.gstNumber && includeGST ? `<p><strong>GST: ${invoiceSettings.gstNumber}</strong></p>` : ""}
         </div>
 
-        ${bills
+        ${list
           .map(
             (bill, index) => `
           <div class="bill-section">
@@ -400,9 +571,9 @@ export default function Reports() {
           .join("")}
 
         <div class="grand-total">
-          <div>TOTAL SALES: ₹${bills.reduce((sum, bill) => sum + bill.subTotal, 0).toLocaleString()}</div>
+          <div>TOTAL SALES: ₹${list.reduce((sum, bill) => sum + bill.subTotal, 0).toLocaleString()}</div>
           <div style="font-size: 14px; margin-top: 10px;">
-            Total Bills: ${bills.length} | Total Items: ${bills.reduce((sum, bill) => sum + bill.items.length, 0)}
+            Total Bills: ${list.length} | Total Items: ${list.reduce((sum, bill) => sum + bill.items.length, 0)}
           </div>
         </div>
       </body>
@@ -535,6 +706,7 @@ export default function Reports() {
         const billDate = new Date(bill.date.split("-").reverse().join("-")); // Convert DD-MM-YYYY to YYYY-MM-DD
         const startDate = new Date(from);
         const endDate = new Date(to);
+        endDate.setHours(23, 59, 59, 999);
         return billDate >= startDate && billDate <= endDate;
       });
 
@@ -929,13 +1101,23 @@ export default function Reports() {
                   generated totals
                 </p>
               </div>
-              <Button
-                onClick={generateMismatchReport}
-                disabled={mismatchReports.length === 0}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Export Mismatches ({mismatchReports.length})
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  onClick={generateMismatchReport}
+                  disabled={mismatchReports.length === 0}
+                  variant="outline"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export ({mismatchReports.length})
+                </Button>
+                <Button
+                  onClick={fixAllMismatches}
+                  disabled={mismatchReports.length === 0}
+                >
+                  <Wand2 className="h-4 w-4 mr-2" />
+                  Fix All
+                </Button>
+              </div>
             </div>
 
             {mismatchReports.length === 0 ? (
@@ -984,6 +1166,7 @@ export default function Reports() {
                           </th>
                           <th className="text-left p-3 font-medium">Status</th>
                           <th className="text-left p-3 font-medium">Items</th>
+                          <th className="text-left p-3 font-medium">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1006,21 +1189,95 @@ export default function Reports() {
                               ₹{bill.expectedTotal}
                             </td>
                             <td className="p-3">
-                              <span className="font-bold text-red-600">
-                                {bill.difference > 0 ? "+" : ""}₹
-                                {bill.difference}
-                              </span>
+                              {(() => {
+                                const calculatedDifference = bill.subTotal - bill.expectedTotal;
+                                return (
+                                  <span className="font-bold text-red-600">
+                                    {calculatedDifference > 0 ? "+" : ""}₹
+                                    {calculatedDifference}
+                                  </span>
+                                );
+                              })()}
                             </td>
                             <td className="p-3">
-                              <Badge variant="destructive">
-                                {bill.difference > 0 ? "Under" : "Over"} by ₹
-                                {Math.abs(bill.difference)}
-                              </Badge>
+                              {(() => {
+                                const calculatedDifference = bill.subTotal - bill.expectedTotal;
+                                return (
+                                  <Badge variant="destructive">
+                                    {calculatedDifference > 0 ? "Under" : "Over"} by ₹
+                                    {Math.abs(calculatedDifference)}
+                                  </Badge>
+                                );
+                              })()}
                             </td>
                             <td className="p-3">
                               <span className="text-sm text-muted-foreground">
                                 {bill.items.length} items
                               </span>
+                            </td>
+                            <td className="p-3">
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    fixMismatch(bill);
+                                  }}
+                                  title="Auto-fix this mismatch"
+                                >
+                                  <Wand2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    copyMismatchData(bill, false);
+                                  }}
+                                  title="Copy bill data"
+                                >
+                                  <Copy className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    copyMismatchData(bill, true);
+                                  }}
+                                  title="Copy and delete bill"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (
+                                      confirm(
+                                        `Remove bill #${bill.billNumber} from mismatch report? Stock will be restored.`,
+                                      )
+                                    ) {
+                                      deleteBill(bill.id, { restoreStock });
+                                    }
+                                  }}
+                                  title="Remove from mismatch report"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    sendToBills(bill, false);
+                                  }}
+                                  title="Send to Bills (prefill)"
+                                >
+                                  <Send className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -1177,6 +1434,7 @@ export default function Reports() {
                         );
                         const startDate = new Date(bulkPdfDateRange.from);
                         const endDate = new Date(bulkPdfDateRange.to);
+                        endDate.setHours(23, 59, 59, 999);
                         return billDate >= startDate && billDate <= endDate;
                       }).length
                     }{" "}
@@ -1253,7 +1511,7 @@ export default function Reports() {
                               <div className="truncate">{item.name}</div>
                               <div>{item.quantity}</div>
                               <div>₹{item.price}</div>
-                              <div>₹{item.total}</div>
+                              <div>��{item.total}</div>
                             </div>
                           ))}
 

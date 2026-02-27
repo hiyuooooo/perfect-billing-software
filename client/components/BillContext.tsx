@@ -56,7 +56,8 @@ interface BillContextType {
     blockedNumbers: number[],
     availableStock?: any[],
     reduceStockCallback?: (id: number, quantity: number) => boolean,
-  ) => void;
+    progressCallback?: (billNumber: number, message: string) => void,
+  ) => Promise<Bill[]>;
   deleteAllBills: () => void;
 }
 
@@ -286,13 +287,159 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
     setBills([]);
   };
 
-  // Enhanced 200-iteration algorithm following Python bill generation rules
-  const generateOptimalBillItems = (
+  // Function to adjust bill after initial generation to match exact target
+  const adjustBillToMatchTarget = (
+    initialBill: { items: BillItem[]; total: number },
+    targetTotal: number,
+    availableItems: any[],
+  ): { items: BillItem[]; total: number } | null => {
+    let adjustedItems = [...initialBill.items];
+    let currentTotal = initialBill.total;
+    const difference = targetTotal - currentTotal;
+
+    // If already matching perfectly, return as is
+    if (Math.abs(difference) === 0) {
+      return initialBill;
+    }
+
+    console.log(
+      `Adjusting bill: Current ₹${currentTotal}, Target ₹${targetTotal}, Difference ₹${difference}`,
+    );
+
+    // Case 1: Total is LESS than target - ADD items to increase
+    if (difference > 0) {
+      console.log(`Under target by ���${difference}, adding items...`);
+
+      // Get available items not already in bill
+      const unusedItems = availableItems.filter(
+        (item) => !adjustedItems.some((selected) => selected.id === item.id),
+      );
+
+      // Sort by price for flexibility
+      const sortedUnused = unusedItems.sort((a, b) => a.price - b.price);
+
+      for (const item of sortedUnused) {
+        if (currentTotal >= targetTotal) break; // Stop if we've reached target
+
+        // Calculate how many units we need
+        const remainingDifference = targetTotal - currentTotal;
+        let qtyToAdd = Math.ceil(remainingDifference / item.price);
+
+        // Don't exceed available quantity
+        qtyToAdd = Math.min(qtyToAdd, item.availableQuantity);
+
+        if (qtyToAdd > 0) {
+          const itemCost = item.price * qtyToAdd;
+
+          // Check if adding this item overshoots too much
+          if (currentTotal + itemCost <= targetTotal + 20) {
+            // Allow up to ₹20 overshoot
+            const billItem: BillItem = {
+              id: item.id,
+              name: item.name,
+              price: item.price,
+              quantity: qtyToAdd,
+              total: itemCost,
+            };
+
+            adjustedItems.push(billItem);
+            currentTotal += itemCost;
+            console.log(
+              `Added ${item.name} (qty: ${qtyToAdd}) for ₹${itemCost}, total now ₹${currentTotal}`,
+            );
+          } else {
+            // Try adding just 1 unit if it doesn't overshoot too much
+            const singleItemCost = item.price;
+            if (currentTotal + singleItemCost <= targetTotal + 20) {
+              const billItem: BillItem = {
+                id: item.id,
+                name: item.name,
+                price: item.price,
+                quantity: 1,
+                total: singleItemCost,
+              };
+
+              adjustedItems.push(billItem);
+              currentTotal += singleItemCost;
+              console.log(
+                `Added ${item.name} (qty: 1) for ₹${singleItemCost}, total now ₹${currentTotal}`,
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // Case 2: Total is MORE than target - REDUCE or REMOVE items
+    else if (difference < 0) {
+      console.log(
+        `Over target by ₹${Math.abs(difference)}, removing/reducing items...`,
+      );
+
+      const amountToRemove = Math.abs(difference);
+
+      // Try to reduce quantities first
+      for (let i = adjustedItems.length - 1; i >= 0; i--) {
+        if (currentTotal <= targetTotal) break;
+
+        const item = adjustedItems[i];
+        const remainingOverage = currentTotal - targetTotal;
+
+        // Option 1: Remove the entire item if it fits
+        if (currentTotal - item.total >= targetTotal - 20) {
+          // Allow up to ₹20 undershoot
+          currentTotal -= item.total;
+          adjustedItems.splice(i, 1);
+          console.log(
+            `Removed entire item: ${item.name} (qty: ${item.quantity}), total now ₹${currentTotal}`,
+          );
+        }
+        // Option 2: Reduce quantity
+        else if (item.quantity > 1) {
+          const qtyToRemove = Math.ceil(remainingOverage / item.price);
+          const actualQtyToRemove = Math.min(qtyToRemove, item.quantity - 1); // Keep at least 1 unit
+
+          if (actualQtyToRemove > 0) {
+            const removedCost = item.price * actualQtyToRemove;
+            item.quantity -= actualQtyToRemove;
+            item.total -= removedCost;
+            currentTotal -= removedCost;
+            console.log(
+              `Reduced ${item.name} by ${actualQtyToRemove} units, total now ₹${currentTotal}`,
+            );
+          }
+        }
+      }
+    }
+
+    // Ensure we still have minimum items
+    if (adjustedItems.length === 0) {
+      console.log("Adjustment resulted in no items, returning initial bill");
+      return initialBill;
+    }
+
+    console.log(
+      `Adjustment complete: ${adjustedItems.length} items, final total ₹${currentTotal}`,
+    );
+    return { items: adjustedItems, total: currentTotal };
+  };
+
+  // Helper function to yield control to browser periodically using requestAnimationFrame
+  const yieldToUI = (): Promise<void> => {
+    return new Promise((resolve) => {
+      requestAnimationFrame(() => {
+        setTimeout(resolve, 0);
+      });
+    });
+  };
+
+  // Enhanced 100,000-iteration algorithm following Python bill generation rules
+  const generateOptimalBillItems = async (
     targetTotal: number,
     stockToUse: any[],
     previousItems: string[] = [],
     billNumber?: number,
-  ): { items: BillItem[]; total: number } => {
+  ): Promise<{ items: BillItem[]; total: number }> => {
     console.log(
       "Generating optimal bill items for target:",
       targetTotal,
@@ -301,14 +448,19 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
     );
 
     // Get available items that aren't in previous bill to avoid repetition
+    // Also exclude items with 0 price
     let availableItems = stockToUse.filter(
       (item) =>
-        !previousItems.includes(item.name) && item.availableQuantity > 0,
+        !previousItems.includes(item.name) &&
+        item.availableQuantity > 0 &&
+        item.price > 0,
     );
 
     if (availableItems.length < 2) {
-      // If not enough unique items available, use all available items with stock
-      availableItems = stockToUse.filter((item) => item.availableQuantity > 0);
+      // If not enough unique items available, use all available items with stock and price > 0
+      availableItems = stockToUse.filter(
+        (item) => item.availableQuantity > 0 && item.price > 0,
+      );
       console.log(
         `Not enough unique items (${availableItems.length}), using all available items with stock: ${availableItems.length}`,
       );
@@ -318,10 +470,84 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
       return { items: [], total: 0 };
     }
 
+    // Sort items by price and bias selection based on transaction value
+    const avgItemPrice = availableItems.reduce((sum, item) => sum + item.price, 0) / availableItems.length;
+
+    if (targetTotal >= 10000) {
+      // For very high bills (10000+), select mostly high-priced items (80% high-priced)
+      const sortedByPrice = [...availableItems].sort((a, b) => b.price - a.price); // Descending
+      const highPriceThreshold = Math.ceil(availableItems.length * 0.2);
+      const selectedHigh = sortedByPrice.slice(0, highPriceThreshold);
+      const selectedLow = sortedByPrice.slice(highPriceThreshold);
+
+      // Mix: 80% high-priced + 20% others
+      availableItems = [
+        ...selectedHigh,
+        ...selectedHigh,
+        ...selectedHigh,
+        ...selectedHigh,
+        ...selectedLow,
+      ].slice(0, availableItems.length);
+      console.log("Very high bill (10000+): heavily biased toward high-priced items");
+    } else if (targetTotal >= 5000) {
+      // For high bills (5000-9999), select mostly high-priced items (60% high-priced)
+      const sortedByPrice = [...availableItems].sort((a, b) => b.price - a.price); // Descending
+      const highPriceThreshold = Math.ceil(availableItems.length * 0.4);
+      const selectedHigh = sortedByPrice.slice(0, highPriceThreshold);
+      const selectedLow = sortedByPrice.slice(highPriceThreshold);
+
+      // Mix: 60% high-priced + 40% others
+      availableItems = [
+        ...selectedHigh,
+        ...selectedHigh,
+        ...selectedHigh,
+        ...selectedLow,
+        ...selectedLow,
+      ].slice(0, availableItems.length);
+      console.log("High bill (5000-9999): biased toward high-priced items (60%)");
+    } else if (targetTotal >= 1000) {
+      // For medium bills (1000-4999), balanced mix (40% high-priced)
+      const sortedByPrice = [...availableItems].sort((a, b) => b.price - a.price);
+      const highPriceThreshold = Math.ceil(availableItems.length * 0.6);
+      const selectedHigh = sortedByPrice.slice(0, highPriceThreshold);
+      const selectedLow = sortedByPrice.slice(highPriceThreshold);
+
+      availableItems = [...selectedHigh, ...selectedHigh, ...selectedLow, ...selectedLow].slice(0, availableItems.length);
+      console.log("Medium bill (1000-4999): balanced mix");
+    } else {
+      // For small bills (< 1000), prefer lower-priced items
+      availableItems = [...availableItems].sort((a, b) => a.price - b.price);
+      console.log("Small bill (<1000): biased toward low-priced items");
+    }
+
     let bestMatch: { items: BillItem[]; total: number } | null = null;
     let closestDiff = Infinity;
-    const tolerance = 5; // Reduced tolerance to ±5 for better accuracy
+    const tolerance = 20; // Final difference tolerance ±20
     let iterationsPerformed = 0;
+
+    // Dynamically determine max items based on target total
+    let maxItems: number;
+    let minItems: number;
+
+    if (targetTotal < 100) {
+      // For bills < ₹100, use 1 item
+      minItems = 1;
+      maxItems = 1;
+    } else if (targetTotal < 5000) {
+      // For bills ₹100-₹5000, allow 2-7 items
+      minItems = 2;
+      maxItems = Math.floor(Math.random() * 6) + 2; // Random between 2-7
+    } else if (targetTotal <= 9000) {
+      // For bills ₹5000-₹9000, minimum 5 items, increase based on amount
+      minItems = 7;
+      const itemsForAmount = Math.ceil(targetTotal / 800) + 3; // 1 item per ���1000 + 2
+      maxItems = Math.min(itemsForAmount, 15); // Cap at 15
+    } else {
+      // For bills > ₹9000, minimum 8 items, increase based on amount
+      minItems = 8;
+      const itemsForAmount = Math.ceil(targetTotal / 700) + 4; // 1 item per ₹700 + 4
+      maxItems = Math.min(itemsForAmount, 20); // Cap at 20
+    }
 
     // Start iteration monitoring if bill number provided
     let monitorId: string | null = null;
@@ -331,27 +557,46 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
       iterationMonitor.logIteration(
         monitorId,
         0,
-        `Starting 200 iterations for bill ${billNumber} with target ₹${targetTotal}`,
+        `Starting 3,000 iterations for bill ${billNumber} with target ₹${targetTotal}`,
         "info",
       );
     }
 
-    // Complete 200 iterations to find the best combination
-    for (let attempt = 0; attempt < 200; attempt++) {
+    // Complete 3,000 iterations to find the best combination (reduced from 10,000 for faster generation)
+    const maxIterations = 3000;
+    for (let attempt = 0; attempt < maxIterations; attempt++) {
       iterationsPerformed++;
 
-      // Log iteration progress
-      if (monitorId && iterationMonitor) {
-        iterationMonitor.logIteration(
-          monitorId,
-          attempt + 1,
-          `Iteration ${attempt + 1}/200: Trying new combination...`,
-          "info",
-        );
+      // Yield to UI every 100 iterations to keep page responsive
+      if (attempt % 100 === 0 && attempt > 0) {
+        await yieldToUI();
       }
 
-      // Shuffle items randomly each iteration (equivalent to pandas sample(frac=1))
+      // Log iteration progress every 1,000 iterations to avoid spam
+      if (attempt % 1000 === 0) {
+        if (monitorId && iterationMonitor) {
+          iterationMonitor.updateIteration(monitorId, {
+            currentIteration: attempt + 1,
+          });
+        }
+      }
+
+      // Shuffle items randomly each iteration with price preference for higher targets
       const shuffledItems = [...availableItems];
+
+      // For higher transaction totals, prefer higher-priced items
+      if (targetTotal > 5000) {
+        // Sort by price descending for high-value transactions
+        shuffledItems.sort((a, b) => b.price - a.price);
+      } else if (targetTotal > 500) {
+        // For medium transactions, slight preference for higher prices but still randomize
+        shuffledItems.sort(() => Math.random() - 0.5);
+      } else {
+        // For small transactions, randomize freely
+        shuffledItems.sort(() => Math.random() - 0.5);
+      }
+
+      // Apply additional random shuffle to avoid too predictable patterns
       for (let i = shuffledItems.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [shuffledItems[i], shuffledItems[j]] = [
@@ -362,10 +607,7 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
 
       const selectedItems: BillItem[] = [];
       let currentTotal = 0;
-      // Vary the number of items from 2 to 7 for more realistic bills
-      const maxItems = Math.floor(Math.random() * 6) + 2; // Random between 2-7 items
 
-      // First, ensure we get at least 2 items by being more lenient
       let itemsAdded = 0;
       const maxItemsToTry = Math.min(shuffledItems.length, maxItems);
 
@@ -377,17 +619,27 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
       ) {
         const item = shuffledItems[itemIndex];
 
-        // Try different quantities (up to 2 as per requirements)
+        // Try different quantities (bounded by available stock and remaining target)
         let bestQty = 0;
         let bestQtyTotal = 0;
-
-        for (let qty = 1; qty <= Math.min(2, item.availableQuantity); qty++) {
+        // Cap max quantity at 25 to ensure balanced, human-like bills
+        const maxQtyPerItem = 25;
+        const calculatedMaxQty = Math.ceil((targetTotal - currentTotal) / Math.max(1, item.price)) + 2;
+        const maxQty = Math.max(
+          1,
+          Math.min(
+            item.availableQuantity,
+            calculatedMaxQty,
+            maxQtyPerItem,
+          ),
+        );
+        for (let qty = 1; qty <= maxQty; qty++) {
           const itemCost = item.price * qty;
           const newTotal = currentTotal + itemCost;
 
-          // Be more lenient for the first 2 items to ensure minimum requirement
+          // Be more lenient for the first item(s) if we haven't reached minimum items yet
           const currentTolerance =
-            selectedItems.length < 2 ? tolerance * 6 : tolerance;
+            selectedItems.length < minItems ? tolerance * 6 : tolerance;
 
           // Check if this addition keeps us within bounds or gets us closer to target
           if (newTotal <= targetTotal + currentTolerance) {
@@ -421,8 +673,8 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // If we still don't have 2 items, force add the cheapest available items
-      if (selectedItems.length < 2 && shuffledItems.length >= 2) {
+      // If we still don't have minimum items, force add the cheapest available items
+      if (selectedItems.length < minItems && shuffledItems.length >= minItems) {
         const remainingItems = shuffledItems.filter(
           (item) => !selectedItems.some((selected) => selected.id === item.id),
         );
@@ -432,7 +684,7 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
         );
 
         for (const item of sortedRemaining) {
-          if (selectedItems.length >= 2) break;
+          if (selectedItems.length >= minItems) break;
 
           const billItem: BillItem = {
             id: item.id,
@@ -447,8 +699,8 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // Enforce minimum 2 items per bill rule
-      if (selectedItems.length < 2) {
+      // Enforce minimum items per bill rule
+      if (selectedItems.length < minItems) {
         continue; // Skip this combination, try next iteration
       }
 
@@ -468,51 +720,70 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
               total: currentTotal,
               difference: finalDiff,
             },
+            currentIteration: attempt + 1,
           });
         }
 
-        // Continue all 200 iterations to find the absolute best match
+        // Stop early if perfect match found
         if (finalDiff === 0) {
           console.log(
-            `Found perfect match on iteration ${attempt + 1}, continuing for optimization...`,
+            `✓ PERFECT MATCH FOUND on iteration ${attempt + 1}! Total: ₹${currentTotal}, difference: ₹0`,
           );
           if (monitorId && iterationMonitor) {
             iterationMonitor.logIteration(
               monitorId,
               attempt + 1,
-              `Perfect match found! Total: ₹${currentTotal}, difference: ₹0`,
+              `✓ PERFECT MATCH FOUND! Total: ₹${currentTotal}. Stopping iterations.`,
               "success",
             );
           }
+          break; // Stop iterations early for perfect match
         } else if (finalDiff <= tolerance && selectedItems.length >= 2) {
           console.log(
-            `Found good match within ±${tolerance} on iteration ${attempt + 1}, continuing for optimization...`,
+            `Good match within ±${tolerance} on iteration ${attempt + 1}: ₹${currentTotal}`,
           );
           if (monitorId && iterationMonitor) {
             iterationMonitor.logIteration(
               monitorId,
               attempt + 1,
-              `Good match found! Total: ₹${currentTotal}, difference: ₹${finalDiff}`,
+              `Good match found! Total: ₹${currentTotal}, difference: ±₹${finalDiff}`,
               "success",
             );
           }
+        } else if (attempt % 10000 === 0) {
+          // Log progress every 10,000 iterations
+          if (monitorId && iterationMonitor) {
+            iterationMonitor.logIteration(
+              monitorId,
+              attempt + 1,
+              `Iteration ${(attempt + 1).toLocaleString()}: Best so far ₹${currentTotal} (±₹${finalDiff})`,
+              "info",
+            );
+          }
+        }
+      } else if (attempt % 20000 === 0 && attempt > 0) {
+        // Update progress even when no improvement found
+        if (monitorId && iterationMonitor) {
+          iterationMonitor.updateIteration(monitorId, {
+            currentIteration: attempt + 1,
+          });
         }
       }
     }
 
     // If no acceptable match found, create a fallback with minimum requirements
-    if (!bestMatch || bestMatch.items.length < 2) {
+    if (!bestMatch) {
       console.log(
-        "No suitable match found in 200 iterations, creating fallback",
+        `No suitable match found in 200 iterations, creating fallback with minimum ${minItems} items`,
       );
 
       const selectedItems: BillItem[] = [];
       let currentTotal = 0;
 
-      // Sort items by price and take cheapest items to ensure minimum 2 items
+      // Sort items by price and take cheapest items to ensure minimum items requirement
       const sortedItems = availableItems.sort((a, b) => a.price - b.price);
 
-      for (let i = 0; i < Math.min(2, sortedItems.length); i++) {
+      for (let i = 0; i < Math.min(minItems, sortedItems.length); i++) {
         const item = sortedItems[i];
         const billItem: BillItem = {
           id: item.id,
@@ -527,6 +798,34 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
 
       bestMatch = { items: selectedItems, total: currentTotal };
       closestDiff = Math.abs(currentTotal - targetTotal);
+    } else if (bestMatch.items.length < minItems) {
+      // Even if we found a match, ensure it meets minimum items requirement
+      console.log(
+        `Found match with ${bestMatch.items.length} items, but minimum required is ${minItems}. Trying to add more items...`,
+      );
+
+      const remainingItems = availableItems.filter(
+        (item) => !bestMatch.items.some((selected) => selected.id === item.id),
+      );
+
+      const sortedRemaining = remainingItems.sort((a, b) => a.price - b.price);
+
+      for (const item of sortedRemaining) {
+        if (bestMatch.items.length >= minItems) break;
+
+        const billItem: BillItem = {
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: 1,
+          total: item.price,
+        };
+
+        bestMatch.items.push(billItem);
+        bestMatch.total += billItem.total;
+      }
+
+      closestDiff = Math.abs(bestMatch.total - targetTotal);
     }
 
     console.log(
@@ -535,6 +834,36 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
       `target: ₹${targetTotal}, difference: ₹${closestDiff},`,
       `within ±${tolerance}: ${closestDiff <= tolerance}`,
     );
+
+    // Post-generation adjustment: Add or remove items to match exact expected total
+    if (bestMatch && Math.abs(bestMatch.total - targetTotal) > 0) {
+      console.log(
+        `Starting post-generation adjustment. Current: ₹${bestMatch.total}, Target: ₹${targetTotal}`,
+      );
+
+      const adjustedBill = adjustBillToMatchTarget(
+        bestMatch,
+        targetTotal,
+        availableItems,
+      );
+
+      if (adjustedBill) {
+        bestMatch = adjustedBill;
+        closestDiff = Math.abs(bestMatch.total - targetTotal);
+        console.log(
+          `After adjustment: ${bestMatch.items.length} items, total: ₹${bestMatch.total}, difference: ₹${closestDiff}`,
+        );
+
+        if (monitorId && iterationMonitor) {
+          iterationMonitor.logIteration(
+            monitorId,
+            3000,
+            `Post-adjustment result: ${bestMatch.items.length} items, total: ₹${bestMatch.total}, difference: ₹${closestDiff}`,
+            "info",
+          );
+        }
+      }
+    }
 
     // Complete iteration monitoring
     if (monitorId && iterationMonitor) {
@@ -546,39 +875,86 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
               difference: closestDiff,
             }
           : null,
-        currentIteration: 200,
+        currentIteration: 3000,
       });
       iterationMonitor.logIteration(
         monitorId,
-        200,
-        `Completed all 200 iterations. Final result: ${bestMatch.items.length} items, total: ₹${bestMatch.total}, difference: ₹${closestDiff}`,
+        3000,
+        `Completed all 3,000 iterations. Final result: ${bestMatch.items.length} items, total: ₹${bestMatch.total}, difference: ₹${closestDiff}`,
         "success",
       );
+    }
+
+    // Always return a valid result, even if not perfect
+    if (!bestMatch) {
+      console.warn(
+        `No valid bill items found for target ₹${targetTotal} after all iterations`,
+      );
+      // Return empty result instead of null
+      return { items: [], total: 0 };
+    }
+
+    // Add low-priced items to balance the bill to exact target value (if needed)
+    const difference = targetTotal - bestMatch.total;
+    if (Math.abs(difference) > 0 && availableItems.length > 0) {
+      // Find low-priced items not already in the bill
+      const usedItemIds = new Set(bestMatch.items.map(item => item.id));
+      const lowPricedItems = availableItems
+        .filter(item => !usedItemIds.has(item.id))
+        .sort((a, b) => a.price - b.price);
+
+      // Add up to 2 low-priced items to balance
+      let remaining = difference;
+      let addedCount = 0;
+      for (const item of lowPricedItems) {
+        if (addedCount >= 2 || remaining <= 0) break;
+
+        const billItem: BillItem = {
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: 1,
+          total: item.price,
+        };
+
+        if (item.price <= Math.abs(remaining)) {
+          bestMatch.items.push(billItem);
+          bestMatch.total += billItem.total;
+          remaining -= billItem.total;
+          addedCount++;
+          console.log(`Added balancing item: ${item.name} (₹${item.price})`);
+        }
+      }
     }
 
     return bestMatch;
   };
 
-  const generateBillsFromTransactions = (
+  const generateBillsFromTransactions = async (
     transactions: any[],
     startingBillNumber: number,
     blockedNumbers: number[],
     availableStock: any[] = [],
     reduceStockCallback?: (id: number, quantity: number) => boolean,
+    progressCallback?: (billNumber: number, message: string) => void,
   ) => {
     const generatedBills: Bill[] = [];
     let currentBillNumber = startingBillNumber;
 
-    // Use provided stock or fallback to mock data, ensure only items with available quantity > 0
+    // Use provided stock or fallback to mock data, ensure only items with available quantity > 0 and price > 0
     const stockToUse =
       availableStock.length > 0
         ? availableStock
-            .filter((item) => item.availableQuantity > 0) // Only include items with stock
+            .filter(
+              (item) =>
+                item.availableQuantity > 0 &&
+                ((item as any).mrp ?? (item as any).price) > 0,
+            )
             .map((item) => ({
-              id: item.id,
-              name: item.itemName,
-              price: item.price,
-              availableQuantity: item.availableQuantity,
+              id: (item as any).id,
+              name: (item as any).itemName,
+              price: (item as any).mrp ?? (item as any).price,
+              availableQuantity: (item as any).availableQuantity,
             }))
         : [
             { id: 1, name: "Rice (1kg)", price: 80, availableQuantity: 150 },
@@ -608,8 +984,12 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
     );
 
     let previousBillItems: string[] = [];
+    console.log("Starting main transaction loop...");
 
-    transactions.forEach((transaction, index) => {
+    for (let index = 0; index < transactions.length; index++) {
+      console.log(`Processing transaction ${index + 1}/${transactions.length}`);
+      const transaction = transactions[index];
+
       // Skip blocked bill numbers - keep incrementing until we find an unblocked number
       while (blockedNumbers.includes(currentBillNumber)) {
         console.log(`Skipping blocked bill number: ${currentBillNumber}`);
@@ -628,126 +1008,123 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
         console.warn(
           `Skipping transaction ${transaction.id} - invalid total: ${targetTotal}`,
         );
-        return; // Skip invalid transactions
+        continue; // Skip invalid transactions
       }
 
       console.log(
-        `Generating bill for transaction ${index + 1}/${transactions.length}: target ${targetTotal}`,
+        `Generating bill ${index + 1}/${transactions.length} (Bill #${currentBillNumber}): target ₹${targetTotal}`,
       );
 
-      // Generate bill items using enhanced algorithm
-      const result = generateOptimalBillItems(
-        targetTotal,
-        stockToUse,
-        previousBillItems,
-        currentBillNumber,
-      );
+      // Sequential generation: Keep trying until bill is perfect (within tolerance)
+      let selectedItems: BillItem[] = [];
+      let currentTotal = 0;
+      let generationAttempt = 0;
+      const maxGenerationAttempts = 5; // Try up to 5 times per bill (each with 10,000 iterations)
+      let billIsPerfect = false;
 
-      let selectedItems = result.items;
-      let currentTotal = result.total;
-
-      // If no items generated, create fallback ensuring minimum 2 items
-      if (selectedItems.length === 0) {
-        console.warn("No items generated, using fallback with minimum 2 items");
-        selectedItems = [];
-        currentTotal = 0;
-
-        // Get available items with stock
-        const availableForFallback = stockToUse.filter(
-          (item) => item.availableQuantity > 0,
+      while (!billIsPerfect && generationAttempt < maxGenerationAttempts) {
+        generationAttempt++;
+        console.log(
+          `Bill #${currentBillNumber} - Generation attempt ${generationAttempt}/${maxGenerationAttempts}`,
         );
 
-        if (availableForFallback.length >= 2) {
-          // Sort by price and take 2 cheapest items
+        // Generate bill items using enhanced algorithm
+        const result = await generateOptimalBillItems(
+          targetTotal,
+          stockToUse,
+          previousBillItems,
+          currentBillNumber,
+        );
+
+        selectedItems = result?.items || [];
+        currentTotal = result?.total || 0;
+
+        // Check if within tolerance (±5 for perfect match, ±10 for acceptable)
+        const difference = Math.abs(currentTotal - targetTotal);
+        if (difference <= 5) {
+          billIsPerfect = true;
+          console.log(
+            `✓ Bill #${currentBillNumber} is PERFECT: ₹${currentTotal} (target ₹${targetTotal}, difference ±${difference})`,
+          );
+        } else if (difference <= 10) {
+          billIsPerfect = true;
+          console.log(
+            `✓ Bill #${currentBillNumber} is ACCEPTABLE: ₹${currentTotal} (target ₹${targetTotal}, difference ±${difference})`,
+          );
+        } else {
+          console.log(
+            `Bill #${currentBillNumber} needs adjustment: ₹${currentTotal} (target ₹${targetTotal}, difference ±${difference})`,
+          );
+        }
+      }
+
+      // If no items generated, create fallback
+      if (selectedItems.length === 0) {
+        console.warn(
+          `Bill #${currentBillNumber}: No items generated, using fallback`,
+        );
+
+        // Get available items with stock and price > 0
+        const availableForFallback = stockToUse.filter(
+          (item) => item.availableQuantity > 0 && item.price > 0,
+        );
+
+        if (availableForFallback.length >= 1) {
+          // Sort by price
           const sortedItems = availableForFallback.sort(
             (a, b) => a.price - b.price,
           );
 
-          for (let i = 0; i < Math.min(2, sortedItems.length); i++) {
-            const item = sortedItems[i];
+          // Start with cheapest item and add items to reach target
+          selectedItems = [];
+          currentTotal = 0;
+
+          for (const item of sortedItems) {
+            if (currentTotal >= targetTotal) break; // Stop if we've reached target
+
+            const remainingAmount = targetTotal - currentTotal;
+            let qtyToAdd = Math.max(1, Math.ceil(remainingAmount / item.price));
+            qtyToAdd = Math.min(qtyToAdd, item.availableQuantity);
+
             const billItem = {
               id: item.id,
               name: item.name,
               price: item.price,
-              quantity: 1,
-              total: item.price,
+              quantity: qtyToAdd,
+              total: item.price * qtyToAdd,
             };
             selectedItems.push(billItem);
             currentTotal += billItem.total;
           }
-        } else if (availableForFallback.length === 1) {
-          // Only one item available, use it with quantity 2 if possible
-          const item = availableForFallback[0];
-          const maxQty = Math.min(2, item.availableQuantity);
-          selectedItems = [
-            {
-              id: item.id,
-              name: item.name,
-              price: item.price,
-              quantity: maxQty,
-              total: item.price * maxQty,
-            },
-          ];
-          currentTotal = item.price * maxQty;
+        } else {
+          console.error(
+            `Bill #${currentBillNumber}: No available stock items for fallback`,
+          );
+          // Skip this bill if no stock available
+          continue;
         }
       }
 
-      // Check tolerance constraint (±5 for better accuracy)
-      const difference = Math.abs(currentTotal - targetTotal);
-      if (difference > 5) {
-        console.warn(
-          `Bill ${currentBillNumber} exceeds ±5 tolerance: difference ${difference}`,
-        );
+      // Final check and adjustment if still not perfect
+      let finalDifference = Math.abs(currentTotal - targetTotal);
+      if (finalDifference > 10) {
         console.log(
-          "Target:",
-          targetTotal,
-          "Generated:",
-          currentTotal,
-          "Items:",
-          selectedItems.length,
+          `Bill #${currentBillNumber} still needs adjustment: difference ±${finalDifference}`,
         );
 
-        // Try multiple retries with different approaches if tolerance exceeded
-        let bestRetryResult = { items: selectedItems, total: currentTotal };
-        let bestRetryDiff = difference;
-
-        // Retry 1: Don't avoid previous items
-        const retryResult1 = generateOptimalBillItems(
+        // Use the adjustment function as final resort
+        const adjustmentResult = adjustBillToMatchTarget(
+          { items: selectedItems, total: currentTotal },
           targetTotal,
           stockToUse,
-          [], // Don't avoid previous items on retry
         );
-        const retry1Diff = Math.abs(retryResult1.total - targetTotal);
-        if (retry1Diff < bestRetryDiff) {
-          bestRetryResult = retryResult1;
-          bestRetryDiff = retry1Diff;
-        }
 
-        // Retry 2: Use only high-value items for large targets
-        if (targetTotal > 300) {
-          const highValueItems = stockToUse.filter(
-            (item) => item.price > 50 && item.availableQuantity > 0,
-          );
-          if (highValueItems.length >= 2) {
-            const retryResult2 = generateOptimalBillItems(
-              targetTotal,
-              highValueItems,
-              [],
-            );
-            const retry2Diff = Math.abs(retryResult2.total - targetTotal);
-            if (retry2Diff < bestRetryDiff) {
-              bestRetryResult = retryResult2;
-              bestRetryDiff = retry2Diff;
-            }
-          }
-        }
-
-        // Use the best retry result
-        if (bestRetryDiff < difference) {
-          selectedItems = bestRetryResult.items;
-          currentTotal = bestRetryResult.total;
+        if (adjustmentResult) {
+          selectedItems = adjustmentResult.items;
+          currentTotal = adjustmentResult.total;
+          finalDifference = Math.abs(currentTotal - targetTotal);
           console.log(
-            `Retry improved result: ${bestRetryResult.total} (diff: ${bestRetryDiff})`,
+            `Bill #${currentBillNumber} after adjustment: ₹${currentTotal} (difference ±${finalDifference})`,
           );
         }
       }
@@ -759,11 +1136,11 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
         customerName: transaction.customerName,
         items: selectedItems,
         subTotal: currentTotal,
-        expectedTotal: currentTotal, // Set expected total = generated total for no mismatch
+        expectedTotal: targetTotal,
         paymentMode: transaction.paymentMode,
-        status: "generated",
-        difference: 0, // No difference since expected = generated
-        tolerance: difference,
+        status: finalDifference <= 10 ? "generated" : "needs_review",
+        difference: targetTotal - currentTotal,
+        tolerance: finalDifference,
         headerInfo: {
           agencyName: "Sadhana Agency",
           address: "Harsila (Dewalchaura), Bageshwar, Uttarakhand",
@@ -776,6 +1153,11 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
       };
 
       generatedBills.push(bill);
+
+      // Send progress update for UI with sequential numbering
+      if (progressCallback) {
+        progressCallback(generatedBills.length, `Generated Bill #${currentBillNumber}: ${transaction.customerName} - ₹${currentTotal}`);
+      }
 
       // Always reduce stock quantities when generating bills
       if (reduceStockCallback) {
@@ -821,10 +1203,12 @@ export function BillProvider({ children }: { children: React.ReactNode }) {
         console.log(`Pre-skipping blocked bill number: ${currentBillNumber}`);
         currentBillNumber++;
       }
-    });
+    }
 
     console.log("Generated", generatedBills.length, "bills total");
+    console.log("Updating bills state...");
     setBills((prev) => [...prev, ...generatedBills]);
+    console.log("Bill generation complete, returning array");
     return generatedBills;
   };
 

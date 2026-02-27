@@ -1,10 +1,13 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Layout } from "@/components/Layout";
 import { useBill } from "@/components/BillContext";
-import { useLocation, useSearchParams } from "react-router-dom";
+import { useLocation, useSearchParams, useNavigate } from "react-router-dom";
 import { useStock } from "@/components/StockContext";
 import { useIterationMonitor } from "@/components/IterationMonitor";
 import { useCustomer } from "@/components/CustomerContext";
+import { useAccount } from "@/components/AccountManager";
+import { useTemplate } from "@/components/TemplateContext";
+import { useShortcuts } from "@/components/ShortcutsContext";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -51,6 +54,11 @@ import {
   RefreshCw,
   Upload,
   Settings,
+  ArrowUp,
+  ArrowDown,
+  Copy,
+  BookmarkPlus,
+  Loader,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";
@@ -134,44 +142,19 @@ export default function Bills() {
   const { stockItems, reduceStock, restoreStock, adjustStock } = useStock();
   const { getCustomerSuggestions } = useCustomer();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [highlightedBillNumber, setHighlightedBillNumber] = useState<
     number | null
   >(null);
 
-  // Handle highlighting and customer filter from URL parameters
-  useEffect(() => {
-    const highlightParam = searchParams.get("highlight");
-    const customerParam = searchParams.get("customer");
-    const editParam = searchParams.get("edit");
-
-    if (highlightParam) {
-      const billNumber = parseInt(highlightParam);
-      if (!isNaN(billNumber)) {
-        setHighlightedBillNumber(billNumber);
-
-        // If edit=true parameter is present, auto-open edit dialog for the highlighted bill
-        if (editParam === "true") {
-          const billToEdit = bills.find(
-            (bill) => bill.billNumber === billNumber,
-          );
-          if (billToEdit) {
-            setTimeout(() => {
-              startEditBill(billToEdit);
-            }, 100); // Small delay to ensure the component is ready
-          }
-        }
-
-        // Clear highlight after 5 seconds
-        setTimeout(() => {
-          setHighlightedBillNumber(null);
-        }, 5000);
-      }
-    }
-
-    if (customerParam) {
-      setSearchTerm(decodeURIComponent(customerParam));
-    }
-  }, [searchParams, bills]);
+  // Template and Shortcuts
+  const { templates, saveTemplate, loadTemplate, deleteTemplate } =
+    useTemplate();
+  const { registerShortcutHandler, unregisterShortcutHandler } = useShortcuts();
+  const [isSaveTemplateOpen, setIsSaveTemplateOpen] = useState(false);
+  const [templateName, setTemplateName] = useState("");
+  const [templateDescription, setTemplateDescription] = useState("");
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
 
   const handleDeleteBill = (billId: string) => {
     if (
@@ -215,10 +198,25 @@ export default function Bills() {
   const saveEditBill = () => {
     if (!editingBill) return;
 
+    // Filter out items with 0 price
+    const validItems = editItems.filter((item) => item.price > 0);
+
+    if (validItems.length === 0) {
+      alert("No valid items with price > 0. Please add items with prices.");
+      return;
+    }
+
+    if (validItems.length < editItems.length) {
+      const removedCount = editItems.length - validItems.length;
+      alert(
+        `${removedCount} item(s) with 0 price have been excluded from the bill.`,
+      );
+    }
+
     const updatedBill = {
       ...editingBill,
-      items: editItems,
-      subTotal: editItems.reduce((sum, item) => sum + item.total, 0),
+      items: validItems,
+      subTotal: validItems.reduce((sum, item) => sum + item.total, 0),
     };
 
     updateBill(editingBill.id, updatedBill, {
@@ -236,6 +234,10 @@ export default function Bills() {
       prev.map((item, i) => {
         if (i === index) {
           const updated = { ...item, [field]: value };
+          if (field === "price") {
+            // Ensure price is not 0
+            updated.price = Math.max(parseFloat(value) || item.price, 0.01);
+          }
           if (field === "price" || field === "quantity") {
             updated.total = updated.price * updated.quantity;
           }
@@ -250,23 +252,72 @@ export default function Bills() {
     setEditItems((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const moveEditItemUp = (index: number) => {
+    if (index === 0) return;
+    setEditItems((prev) => {
+      const newItems = [...prev];
+      [newItems[index - 1], newItems[index]] = [
+        newItems[index],
+        newItems[index - 1],
+      ];
+      return newItems;
+    });
+  };
+
+  const moveEditItemDown = (index: number) => {
+    if (index === editItems.length - 1) return;
+    setEditItems((prev) => {
+      const newItems = [...prev];
+      [newItems[index], newItems[index + 1]] = [
+        newItems[index + 1],
+        newItems[index],
+      ];
+      return newItems;
+    });
+  };
+
+  // Helpers to enforce price constraints relative to base (MRP)
+  const basePriceById = React.useMemo(() => {
+    const map = new Map<number, number>();
+    stockItems.forEach((s: any) => map.set(s.id, s.mrp ?? s.price));
+    return map;
+  }, [stockItems]);
+  const clampToPriceBand = (id: number, price: number) => {
+    const base = basePriceById.get(id) ?? price;
+    const min = base - 5;
+    const max = base + 5;
+    return Math.min(max, Math.max(min, price));
+  };
+
   const addManualItem = () => {
     const stockItem = stockItems.find(
       (item) => item.id === parseInt(itemToAdd.stockItemId),
     );
     if (!stockItem) return;
 
-    const price = itemToAdd.customPrice
+    const base = (stockItem as any).mrp ?? stockItem.price;
+    const desired = itemToAdd.customPrice
       ? parseFloat(itemToAdd.customPrice)
-      : stockItem.price;
+      : base;
+    const price = clampToPriceBand(
+      stockItem.id,
+      isNaN(desired) ? base : desired,
+    );
+
+    // Validate that price is greater than 0
+    if (price <= 0) {
+      alert("Item price must be greater than 0.");
+      return;
+    }
+
     const total = price * itemToAdd.quantity;
 
     const newItem: BillItem = {
       id: stockItem.id,
       name: stockItem.itemName,
-      price: price,
+      price,
       quantity: itemToAdd.quantity,
-      total: total,
+      total,
     };
 
     setSelectedItems((prev) => [...prev, newItem]);
@@ -281,16 +332,35 @@ export default function Bills() {
     setSelectedItems((prev) =>
       prev.map((item, i) => {
         if (i === index) {
-          const updated = { ...item, [field]: value };
+          const updated = { ...item } as any;
+          if (field === "price") {
+            const numeric = parseFloat(value);
+            const clamped = clampToPriceBand(
+              item.id,
+              isNaN(numeric) ? item.price : numeric,
+            );
+            // Ensure price is not 0
+            updated.price = Math.max(clamped, 0.01);
+          } else if (field === "quantity") {
+            updated.quantity = value;
+          } else {
+            (updated as any)[field] = value;
+          }
           if (field === "price" || field === "quantity") {
             updated.total = updated.price * updated.quantity;
           }
-          return updated;
+          return updated as BillItem;
         }
         return item;
       }),
     );
   };
+
+  const { activeAccount } = useAccount();
+  const draftKey = React.useMemo(
+    () => `createBillDraft_${activeAccount?.id || "global"}`,
+    [activeAccount?.id],
+  );
 
   const resetCreateBillForm = () => {
     setSelectedItems([]);
@@ -300,14 +370,47 @@ export default function Bills() {
       customerName: "",
       targetTotal: "",
       paymentMode: "GPay",
+      additionalText: "",
     });
     setItemToAdd({ stockItemId: "", quantity: 1, customPrice: "" });
+    try {
+      localStorage.removeItem(draftKey);
+    } catch {}
   };
 
   const switchMode = (mode: boolean) => {
     setManualMode(mode);
     setSelectedItems([]); // Clear items when switching modes
   };
+
+  // Template functions
+  const handleSaveAsTemplate = () => {
+    if (!templateName.trim()) {
+      alert("Please enter a template name");
+      return;
+    }
+    saveTemplate(templateName, selectedItems, templateDescription);
+    alert(`Template "${templateName}" saved successfully!`);
+    setIsSaveTemplateOpen(false);
+    setTemplateName("");
+    setTemplateDescription("");
+  };
+
+  const handleLoadTemplate = (templateId: string) => {
+    const items = loadTemplate(templateId);
+    if (items) {
+      setSelectedItems(items);
+      alert("Template loaded successfully!");
+    }
+  };
+
+  const handleDeleteTemplate = (templateId: string) => {
+    if (confirm("Are you sure you want to delete this template?")) {
+      deleteTemplate(templateId);
+      alert("Template deleted successfully!");
+    }
+  };
+
   const [activeTab, setActiveTab] = useState("view");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -323,6 +426,9 @@ export default function Bills() {
     hideCustomerNames: false,
     totalAtLastPage: true,
     includeGST: false,
+    filterByDate: false,
+    fromDate: "",
+    toDate: "",
   });
   const [isPdfBookDialogOpen, setIsPdfBookDialogOpen] = useState(false);
   const [pdfBookOptions, setPdfBookOptions] = useState({
@@ -338,6 +444,7 @@ export default function Bills() {
     customerName: "",
     targetTotal: "",
     paymentMode: "GPay" as "Cash" | "GPay",
+    additionalText: "",
   });
 
   const [selectedItems, setSelectedItems] = useState<BillItem[]>([]);
@@ -347,6 +454,154 @@ export default function Bills() {
     quantity: 1,
     customPrice: "",
   });
+
+  // Load persisted draft on mount and when account changes
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(draftKey);
+      if (saved) {
+        const d = JSON.parse(saved);
+        if (d.newBill) setNewBill((prev) => ({ ...prev, ...d.newBill }));
+        if (Array.isArray(d.selectedItems)) setSelectedItems(d.selectedItems);
+        if (typeof d.manualMode === "boolean") setManualMode(d.manualMode);
+        if (d.isCreateDialogOpen) setIsCreateDialogOpen(true);
+      }
+    } catch {}
+  }, [draftKey]);
+
+  // Persist draft continuously
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        draftKey,
+        JSON.stringify({
+          newBill,
+          selectedItems,
+          manualMode,
+          isCreateDialogOpen,
+        }),
+      );
+    } catch {}
+  }, [newBill, selectedItems, manualMode, isCreateDialogOpen, draftKey]);
+
+  // Prefill create dialog from query params (from Reports mismatches)
+  useEffect(() => {
+    const pb = searchParams.get("prefillBill");
+    const pc = searchParams.get("prefillCustomer");
+    const pd = searchParams.get("prefillDate");
+    const pt = searchParams.get("prefillTarget");
+    const pp = searchParams.get("prefillPayment");
+    const auto = searchParams.get("prefillAuto") === "true";
+    const submit = searchParams.get("prefillSubmit") === "true";
+
+    if (pb || pc || pd || pt) {
+      // If user is already working on a draft, confirm before overwriting
+      const hasDraft =
+        isCreateDialogOpen ||
+        selectedItems.length > 0 ||
+        newBill.customerName.trim() !== "" ||
+        newBill.billNumber.toString().trim() !== "" ||
+        newBill.targetTotal.toString().trim() !== "" ||
+        newBill.additionalText.trim() !== "";
+
+      if (hasDraft) {
+        const proceed = confirm(
+          "You have an unsaved bill draft. Prefill will replace current inputs. Continue?",
+        );
+        if (!proceed) {
+          return; // Do not apply prefill
+        }
+      }
+
+      // Normalize date to yyyy-mm-dd for input if provided as dd-mm-yyyy
+      let dateStr = newBill.date;
+      if (pd) {
+        const parts = pd.split("-");
+        if (parts.length === 3) {
+          dateStr = `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
+        } else {
+          dateStr = pd;
+        }
+      }
+
+      setIsCreateDialogOpen(true);
+      setManualMode(false);
+      setNewBill((prev) => ({
+        ...prev,
+        billNumber: pb || prev.billNumber,
+        date: dateStr,
+        customerName: pc || prev.customerName,
+        targetTotal: pt || prev.targetTotal,
+        paymentMode:
+          pp === "Cash" || pp === "GPay" ? (pp as any) : prev.paymentMode,
+      }));
+
+      if (auto && pt) {
+        const target = Number(pt);
+        if (target > 0) {
+          setTimeout(() => {
+            autoSelectItems(target);
+            if (submit) {
+              setTimeout(() => handleCreateBill(), 300);
+            }
+          }, 200);
+        }
+      }
+      // Strip query params after applying prefill to avoid re-trigger on refresh
+      setTimeout(() => navigate("/bills", { replace: true }), 0);
+    }
+  }, [searchParams, isCreateDialogOpen, selectedItems, newBill]);
+
+  // Auto-populate bill number when dialog opens
+  useEffect(() => {
+    if (isCreateDialogOpen && !newBill.billNumber.trim()) {
+      // Calculate next bill number (highest existing + 1)
+      const maxExisting = bills.length
+        ? Math.max(...bills.map((b) => b.billNumber))
+        : 1000;
+      const nextBillNumber = (maxExisting + 1).toString();
+
+      setNewBill((prev) => ({
+        ...prev,
+        billNumber: nextBillNumber,
+      }));
+    }
+  }, [isCreateDialogOpen, bills]);
+
+  // Handle highlighting and customer filter from URL parameters
+  useEffect(() => {
+    const highlightParam = searchParams.get("highlight");
+    const customerParam = searchParams.get("customer");
+    const editParam = searchParams.get("edit");
+
+    if (highlightParam) {
+      const billNumber = parseInt(highlightParam);
+      if (!isNaN(billNumber)) {
+        setHighlightedBillNumber(billNumber);
+
+        // If edit=true parameter is present, auto-open edit dialog for the highlighted bill
+        if (editParam === "true") {
+          const billToEdit = bills.find(
+            (bill) => bill.billNumber === billNumber,
+          );
+          if (billToEdit) {
+            setTimeout(() => {
+              startEditBill(billToEdit);
+            }, 100); // Small delay to ensure the component is ready
+          }
+        }
+
+        // Clear highlight after 5 seconds
+        setTimeout(() => {
+          setHighlightedBillNumber(null);
+        }, 5000);
+      }
+    }
+
+    if (customerParam) {
+      setSearchTerm(decodeURIComponent(customerParam));
+    }
+  }, [searchParams, bills]);
 
   // Filter bills based on search and status
   const filteredBills = useMemo(() => {
@@ -389,14 +644,19 @@ export default function Bills() {
     console.log("Starting 200-iteration algorithm for target:", targetTotal);
 
     // Get available items that aren't in previous bill to avoid repetition
+    // Also exclude items with 0 price
     let availableItems = stockToUse.filter(
       (item) =>
-        !previousItems.includes(item.name) && item.availableQuantity > 0,
+        !previousItems.includes(item.name) &&
+        item.availableQuantity > 0 &&
+        item.price > 0,
     );
 
     if (availableItems.length < 2) {
-      // If not enough unique items available, use all available items with stock
-      availableItems = stockToUse.filter((item) => item.availableQuantity > 0);
+      // If not enough unique items available, use all available items with stock and price > 0
+      availableItems = stockToUse.filter(
+        (item) => item.availableQuantity > 0 && item.price > 0,
+      );
       console.log(
         `Not enough unique items, using all available items with stock: ${availableItems.length}`,
       );
@@ -406,9 +666,76 @@ export default function Bills() {
       return { items: [], total: 0 };
     }
 
+    // Sort items by price and bias selection based on transaction value
+    const avgItemPrice =
+      availableItems.reduce((sum, item) => sum + item.price, 0) /
+      availableItems.length;
+
+    if (targetTotal >= 10000) {
+      // For very high bills (10000+), select mostly high-priced items (80% high-priced)
+      const sortedByPrice = [...availableItems].sort(
+        (a, b) => b.price - a.price,
+      ); // Descending
+      const highPriceThreshold = Math.ceil(availableItems.length * 0.2);
+      const selectedHigh = sortedByPrice.slice(0, highPriceThreshold);
+      const selectedLow = sortedByPrice.slice(highPriceThreshold);
+
+      // Mix: 80% high-priced + 20% others
+      availableItems = [
+        ...selectedHigh,
+        ...selectedHigh,
+        ...selectedHigh,
+        ...selectedHigh,
+        ...selectedLow,
+      ].slice(0, availableItems.length);
+      console.log(
+        "Very high bill (10000+): heavily biased toward high-priced items",
+      );
+    } else if (targetTotal >= 5000) {
+      // For high bills (5000-9999), select mostly high-priced items (60% high-priced)
+      const sortedByPrice = [...availableItems].sort(
+        (a, b) => b.price - a.price,
+      ); // Descending
+      const highPriceThreshold = Math.ceil(availableItems.length * 0.4);
+      const selectedHigh = sortedByPrice.slice(0, highPriceThreshold);
+      const selectedLow = sortedByPrice.slice(highPriceThreshold);
+
+      // Mix: 60% high-priced + 40% others
+      availableItems = [
+        ...selectedHigh,
+        ...selectedHigh,
+        ...selectedHigh,
+        ...selectedLow,
+        ...selectedLow,
+      ].slice(0, availableItems.length);
+      console.log(
+        "High bill (5000-9999): biased toward high-priced items (60%)",
+      );
+    } else if (targetTotal >= 1000) {
+      // For medium bills (1000-4999), balanced mix (40% high-priced)
+      const sortedByPrice = [...availableItems].sort(
+        (a, b) => b.price - a.price,
+      );
+      const highPriceThreshold = Math.ceil(availableItems.length * 0.6);
+      const selectedHigh = sortedByPrice.slice(0, highPriceThreshold);
+      const selectedLow = sortedByPrice.slice(highPriceThreshold);
+
+      availableItems = [
+        ...selectedHigh,
+        ...selectedHigh,
+        ...selectedLow,
+        ...selectedLow,
+      ].slice(0, availableItems.length);
+      console.log("Medium bill (1000-4999): balanced mix");
+    } else {
+      // For small bills (< 1000), prefer lower-priced items
+      availableItems = [...availableItems].sort((a, b) => a.price - b.price);
+      console.log("Small bill (<1000): biased toward low-priced items");
+    }
+
     let bestMatch: { items: BillItem[]; total: number } | null = null;
     let closestDiff = Infinity;
-    const tolerance = 30; // ±30 tolerance
+    const tolerance = 20; // ±20 tolerance
     let iterationsPerformed = 0;
 
     // Start iteration monitoring
@@ -422,6 +749,22 @@ export default function Bills() {
         `Starting 200 iterations for auto-select with target ₹${targetTotal}`,
         "info",
       );
+    }
+
+    // Compute minimum items requirement upfront (same for all iterations)
+    let minItems: number;
+    if (targetTotal < 100) {
+      // For bills < ₹100, use 1 item
+      minItems = 1;
+    } else if (targetTotal < 5000) {
+      // For bills ₹100-₹5000, allow 2+ items
+      minItems = 2;
+    } else if (targetTotal <= 9000) {
+      // For bills ₹5000-₹9000, minimum 7 items
+      minItems = 7;
+    } else {
+      // For bills > ₹9000, minimum 8 items
+      minItems = 8;
     }
 
     // Complete 200 iterations to find the best combination
@@ -450,10 +793,24 @@ export default function Bills() {
 
       const selectedItems: BillItem[] = [];
       let currentTotal = 0;
-      // Vary the number of items from 2 to 7 for more realistic bills
-      const maxItems = Math.floor(Math.random() * 6) + 2; // Random between 2-7 items
 
-      // First, ensure we get at least 2 items by being more lenient
+      // Randomize max items within the iteration (for variety)
+      let maxItems: number;
+      if (targetTotal < 100) {
+        // For bills < ₹100, use 1 item
+        maxItems = 1;
+      } else if (targetTotal < 5000) {
+        // For bills ₹100-₹5000, randomize between 2-7 items
+        maxItems = Math.floor(Math.random() * 6) + 2; // Random between 2-7
+      } else if (targetTotal <= 9000) {
+        // For bills ₹5000-₹9000, randomize between 7-15 items
+        maxItems = Math.floor(Math.random() * 9) + 7; // Random between 7-15
+      } else {
+        // For bills > ₹9000, randomize between 8-20 items
+        maxItems = Math.floor(Math.random() * 13) + 8; // Random between 8-20
+      }
+
+      // First, try to select items based on target
       for (
         let itemIndex = 0;
         itemIndex < shuffledItems.length && selectedItems.length < maxItems;
@@ -461,17 +818,25 @@ export default function Bills() {
       ) {
         const item = shuffledItems[itemIndex];
 
-        // Try different quantities (up to 2 as per requirements)
+        // Try different quantities with a reasonable cap to avoid extreme quantities
         let bestQty = 0;
         let bestQtyTotal = 0;
+        // Cap max quantity at 25 to ensure balanced, human-like bills
+        const maxQtyPerItem = 25;
+        const calculatedMaxQty =
+          Math.ceil((targetTotal - currentTotal) / Math.max(1, item.price)) + 2;
+        const maxQty = Math.max(
+          1,
+          Math.min(item.availableQuantity, calculatedMaxQty, maxQtyPerItem),
+        );
 
-        for (let qty = 1; qty <= Math.min(2, item.availableQuantity); qty++) {
+        for (let qty = 1; qty <= maxQty; qty++) {
           const itemCost = item.price * qty;
           const newTotal = currentTotal + itemCost;
 
-          // Be more lenient for the first 2 items to ensure minimum requirement
+          // Be more lenient for items before we reach minimum items
           const currentTolerance =
-            selectedItems.length < 2 ? tolerance * 2 : tolerance;
+            selectedItems.length < minItems ? tolerance * 2 : tolerance;
 
           // Check if this addition keeps us within bounds
           if (newTotal <= targetTotal + currentTolerance) {
@@ -497,8 +862,8 @@ export default function Bills() {
         }
       }
 
-      // If we still don't have 2 items, force add the cheapest available items
-      if (selectedItems.length < 2 && shuffledItems.length >= 2) {
+      // If we still don't have minimum items, force add the cheapest available items
+      if (selectedItems.length < minItems && shuffledItems.length >= minItems) {
         const remainingItems = shuffledItems.filter(
           (item) => !selectedItems.some((selected) => selected.id === item.id),
         );
@@ -508,7 +873,7 @@ export default function Bills() {
         );
 
         for (const item of sortedRemaining) {
-          if (selectedItems.length >= 2) break;
+          if (selectedItems.length >= minItems) break;
 
           const billItem: BillItem = {
             id: item.id,
@@ -523,8 +888,8 @@ export default function Bills() {
         }
       }
 
-      // Enforce minimum 2 items per bill rule
-      if (selectedItems.length < 2) {
+      // Enforce minimum items per bill rule
+      if (selectedItems.length < minItems) {
         continue; // Skip this combination, try next iteration
       }
 
@@ -570,18 +935,18 @@ export default function Bills() {
     }
 
     // Fallback if no good match found
-    if (!bestMatch || bestMatch.items.length < 2) {
+    if (!bestMatch) {
       console.log(
-        "No suitable match found in 200 iterations, creating fallback",
+        `No suitable match found in 200 iterations, creating fallback with minimum ${minItems} items`,
       );
 
       const selectedItems: BillItem[] = [];
       let currentTotal = 0;
 
-      // Sort items by price and take cheapest items to ensure minimum 2 items
+      // Sort items by price and take cheapest items to ensure minimum items requirement
       const sortedItems = availableItems.sort((a, b) => a.price - b.price);
 
-      for (let i = 0; i < Math.min(2, sortedItems.length); i++) {
+      for (let i = 0; i < Math.min(minItems, sortedItems.length); i++) {
         const item = sortedItems[i];
         const billItem: BillItem = {
           id: item.id,
@@ -596,6 +961,34 @@ export default function Bills() {
 
       bestMatch = { items: selectedItems, total: currentTotal };
       closestDiff = Math.abs(currentTotal - targetTotal);
+    } else if (bestMatch.items.length < minItems) {
+      // Even if we found a match, ensure it meets minimum items requirement
+      console.log(
+        `Found match with ${bestMatch.items.length} items, but minimum required is ${minItems}. Trying to add more items...`,
+      );
+
+      const remainingItems = availableItems.filter(
+        (item) => !bestMatch.items.some((selected) => selected.id === item.id),
+      );
+
+      const sortedRemaining = remainingItems.sort((a, b) => a.price - b.price);
+
+      for (const item of sortedRemaining) {
+        if (bestMatch.items.length >= minItems) break;
+
+        const billItem: BillItem = {
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: 1,
+          total: item.price,
+        };
+
+        bestMatch.items.push(billItem);
+        bestMatch.total += billItem.total;
+      }
+
+      closestDiff = Math.abs(bestMatch.total - targetTotal);
     }
 
     // Complete iteration monitoring
@@ -621,6 +1014,40 @@ export default function Bills() {
     console.log(
       `Auto-select completed: ${bestMatch.items.length} items, total: ���${bestMatch.total}, difference: ₹${closestDiff}`,
     );
+
+    // Add low-priced items to balance the bill to exact target value (if needed)
+    const difference = targetTotal - bestMatch.total;
+    if (Math.abs(difference) > 0 && availableItems.length > 0) {
+      // Find low-priced items not already in the bill
+      const usedItemIds = new Set(bestMatch.items.map((item) => item.id));
+      const lowPricedItems = availableItems
+        .filter((item) => !usedItemIds.has(item.id))
+        .sort((a, b) => a.price - b.price);
+
+      // Add up to 2 low-priced items to balance
+      let remaining = difference;
+      let addedCount = 0;
+      for (const item of lowPricedItems) {
+        if (addedCount >= 2 || remaining <= 0) break;
+
+        const billItem: BillItem = {
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: 1,
+          total: item.price,
+        };
+
+        if (item.price <= Math.abs(remaining)) {
+          bestMatch.items.push(billItem);
+          bestMatch.total += billItem.total;
+          remaining -= billItem.total;
+          addedCount++;
+          console.log(`Added balancing item: ${item.name} (₹${item.price})`);
+        }
+      }
+    }
+
     return bestMatch;
   };
 
@@ -637,16 +1064,31 @@ export default function Bills() {
       previousItems,
     );
 
-    // Get available items that aren't in previous bill
-    let availableItems = stockItems.filter(
+    // Build available items using MRP when available and avoid previous items
+    // Also exclude items with 0 price
+    let baseItems = stockItems.filter(
       (item) =>
-        item.availableQuantity > 0 && !previousItems.includes(item.itemName),
+        item.availableQuantity > 0 &&
+        !previousItems.includes(item.itemName) &&
+        (item.price > 0 || (item as any).mrp > 0),
     );
 
-    if (availableItems.length < 2) {
-      // If not enough unique items available, use all available items
-      availableItems = stockItems.filter((item) => item.availableQuantity > 0);
+    if (baseItems.length < 2) {
+      // If not enough unique items available, use all available items with price > 0
+      baseItems = stockItems.filter(
+        (item) =>
+          item.availableQuantity > 0 &&
+          (item.price > 0 || (item as any).mrp > 0),
+      );
     }
+
+    // Normalize to a local shape using unitPrice = mrp || price
+    const availableItems = baseItems.map((it) => ({
+      id: it.id,
+      itemName: it.itemName,
+      price: (it as any).mrp ?? it.price,
+      availableQuantity: it.availableQuantity,
+    }));
 
     console.log("Available items:", availableItems.length);
 
@@ -729,12 +1171,9 @@ export default function Bills() {
     }
 
     // Step 3: Try to increase quantities of existing items if under target
-    if (currentTotal < targetTotal - 10) {
+    if (currentTotal < targetTotal - 20) {
       for (const billItem of selectedItems) {
-        if (
-          billItem.quantity < 2 &&
-          currentTotal + billItem.price <= targetTotal + 30
-        ) {
+        if (currentTotal + billItem.price <= targetTotal + 20) {
           const originalItem = stockItems.find(
             (item) => item.id === billItem.id,
           );
@@ -771,7 +1210,7 @@ export default function Bills() {
       iterationMonitor.logIteration(
         monitorId,
         1,
-        `Auto-select completed: ${selectedItems.length} items, total: ₹${currentTotal}, difference: ₹${difference}`,
+        `Auto-select completed: ${selectedItems.length} items, total: ₹${currentTotal}, difference: ���${difference}`,
         "success",
       );
     }
@@ -807,12 +1246,15 @@ export default function Bills() {
     const stockForAlgorithm = stockItems
       .filter((item) => item.availableQuantity > 0)
       .sort((a, b) => a.itemName.localeCompare(b.itemName))
-      .map((item) => ({
-        id: item.id,
-        name: item.itemName,
-        price: item.price,
-        availableQuantity: item.availableQuantity,
-      }));
+      .map((item) => {
+        const unitPrice = (item as any).mrp ?? item.price;
+        return {
+          id: item.id,
+          name: item.itemName,
+          price: unitPrice,
+          availableQuantity: item.availableQuantity,
+        };
+      });
 
     // Switch to iteration monitor tab to show progress
     setActiveTab("monitor");
@@ -835,32 +1277,107 @@ export default function Bills() {
 
     console.log("Generated items:", result.items);
 
-    // Adjust the total to exactly match the target
-    let adjustedItems = [...result.items];
-    let currentTotal = result.total;
-    const difference = targetTotal - currentTotal;
+    // Reset prices to base (MRP) and then adjust within ±5 band to reduce difference
+    let adjustedItems = result.items.map((it) => {
+      const base = basePriceById.get(it.id) ?? it.price;
+      return { ...it, price: base, total: base * it.quantity } as BillItem;
+    });
 
-    if (difference !== 0 && adjustedItems.length > 0) {
-      console.log(`Adjusting total by ₹${difference} to match target exactly`);
+    let currentTotal = adjustedItems.reduce((s, it) => s + it.total, 0);
+    let remaining = Math.round((targetTotal - currentTotal) * 100) / 100;
 
-      // Find the item with the highest quantity to adjust
-      const itemToAdjust = adjustedItems.reduce((max, item) =>
-        item.quantity > max.quantity ? item : max,
-      );
+    if (remaining !== 0 && adjustedItems.length > 0) {
+      const increase = remaining > 0;
+      // Distribute remaining across items, capped by ±5 per unit
+      for (
+        let i = 0;
+        i < adjustedItems.length && Math.abs(remaining) > 0.01;
+        i++
+      ) {
+        const it = adjustedItems[i];
+        const base = basePriceById.get(it.id) ?? it.price;
+        const maxDeltaPerUnit = 5;
+        const currDeltaPerUnit = it.price - base;
+        const capacityPerUnit = increase
+          ? Math.max(0, maxDeltaPerUnit - currDeltaPerUnit)
+          : Math.max(0, maxDeltaPerUnit + currDeltaPerUnit);
+        const capacityTotal = capacityPerUnit * it.quantity;
+        if (capacityTotal <= 0) continue;
+        const apply = increase
+          ? Math.min(remaining, capacityTotal)
+          : -Math.min(Math.abs(remaining), capacityTotal);
+        const perUnitAdj = apply / it.quantity;
+        const newPrice = clampToPriceBand(it.id, it.price + perUnitAdj);
+        it.price = newPrice;
+        it.total = it.price * it.quantity;
+        currentTotal = adjustedItems.reduce((s, x) => s + x.total, 0);
+        remaining = Math.round((targetTotal - currentTotal) * 100) / 100;
+      }
+    }
 
-      if (itemToAdjust) {
-        // Adjust the price of the item to make the total exact
-        const priceAdjustment = difference / itemToAdjust.quantity;
-        itemToAdjust.price = Math.max(1, itemToAdjust.price + priceAdjustment);
-        itemToAdjust.total = itemToAdjust.price * itemToAdjust.quantity;
+    // If still beyond ±20, try quantity tweaks within stock and item cap (7 items total)
+    if (Math.abs(targetTotal - currentTotal) > 20) {
+      const getStockAvail = (id: number) => {
+        const s = stockItems.find((x) => x.id === id);
+        return s ? s.availableQuantity : 9999;
+      };
 
-        // Recalculate total
-        currentTotal = adjustedItems.reduce((sum, item) => sum + item.total, 0);
-
-        console.log(
-          `Adjusted ${itemToAdjust.name} price to ₹${itemToAdjust.price.toFixed(2)}`,
-        );
-        console.log(`New total: ₹${currentTotal}, target: ₹${targetTotal}`);
+      let safety = 100;
+      while (Math.abs(targetTotal - currentTotal) > 20 && safety-- > 0) {
+        const diff = targetTotal - currentTotal;
+        if (diff > 0) {
+          // Prefer increasing qty of existing items within stock
+          let applied = false;
+          for (const it of adjustedItems) {
+            const avail = getStockAvail(it.id);
+            if (it.quantity < avail) {
+              it.quantity += 1;
+              it.total = it.price * it.quantity;
+              applied = true;
+              break;
+            }
+          }
+          if (!applied && adjustedItems.length < 7) {
+            // Add a cheapest new item if possible
+            const candidates = stockItems
+              .filter(
+                (s) =>
+                  s.availableQuantity > 0 &&
+                  !adjustedItems.some((ai) => ai.id === s.id),
+              )
+              .sort((a, b) => (a.mrp ?? a.price) - (b.mrp ?? b.price));
+            if (candidates.length > 0) {
+              const s = candidates[0] as any;
+              const price = clampToPriceBand(s.id, s.mrp ?? s.price);
+              adjustedItems.push({
+                id: s.id,
+                name: s.itemName,
+                price,
+                quantity: 1,
+                total: price,
+              });
+              applied = true;
+            }
+          }
+        } else {
+          // diff < 0 => reduce quantity or remove small items
+          let applied = false;
+          for (const it of adjustedItems) {
+            if (it.quantity > 1) {
+              it.quantity -= 1;
+              it.total = it.price * it.quantity;
+              applied = true;
+              break;
+            }
+          }
+          if (!applied && adjustedItems.length > 2) {
+            // Remove the cheapest line
+            adjustedItems.sort((a, b) => a.total - b.total);
+            adjustedItems.shift();
+            applied = true;
+          }
+        }
+        currentTotal = adjustedItems.reduce((s, x) => s + x.total, 0);
       }
     }
 
@@ -879,15 +1396,46 @@ export default function Bills() {
   };
 
   const handleCreateBill = () => {
+    if (selectedItems.length === 0) {
+      alert(
+        "No items selected. Please auto-generate or add items manually first.",
+      );
+      return;
+    }
+
+    // Filter out items with 0 price
+    const validItems = selectedItems.filter((item) => item.price > 0);
+
+    if (validItems.length === 0) {
+      alert("No valid items with price > 0. Please add items with prices.");
+      return;
+    }
+
+    if (validItems.length < selectedItems.length) {
+      const removedCount = selectedItems.length - validItems.length;
+      alert(
+        `${removedCount} item(s) with 0 price have been excluded from the bill.`,
+      );
+    }
+
+    const summary = validItems
+      .map((i) => `• ${i.name} x ${i.quantity}`)
+      .join("\n");
+    const proceed = confirm(
+      `This will deduct stock for:\n\n${summary}\n\nProceed to create bill and update stock?`,
+    );
+    if (!proceed) return;
+
     const paymentMode = getPaymentMode(newBill.customerName);
     const displayName = cleanCustomerName(newBill.customerName);
 
-    const billNumber =
-      parseInt(newBill.billNumber) ||
-      Math.max(...bills.map((b) => b.billNumber)) + 1;
+    const maxExisting = bills.length
+      ? Math.max(...bills.map((b) => b.billNumber))
+      : 1000;
+    const billNumber = parseInt(newBill.billNumber) || maxExisting + 1;
 
     const targetTotal = parseFloat(newBill.targetTotal) || 0;
-    const generatedTotal = selectedItems.reduce(
+    const generatedTotal = validItems.reduce(
       (sum, item) => sum + item.total,
       0,
     );
@@ -897,13 +1445,16 @@ export default function Bills() {
       billNumber: billNumber,
       date: new Date(newBill.date).toLocaleDateString("en-GB"),
       customerName: displayName,
-      items: selectedItems,
-      subTotal: targetTotal > 0 ? targetTotal : generatedTotal, // Use target total if available
-      expectedTotal: targetTotal > 0 ? targetTotal : generatedTotal, // Use target total if available
+      items: validItems,
+      subTotal: generatedTotal, // Actual generated total
+      expectedTotal: targetTotal > 0 ? targetTotal : generatedTotal, // Expected = target if provided
       paymentMode,
       status: "draft",
-      difference: 0, // No difference since we match the target exactly
-      tolerance: 0,
+      difference:
+        (targetTotal > 0 ? targetTotal : generatedTotal) - generatedTotal, // Positive => Under
+      tolerance: Math.abs(
+        (targetTotal > 0 ? targetTotal : generatedTotal) - generatedTotal,
+      ),
       headerInfo: {
         agencyName: "Sadhana Agency",
         address: "Harsila (Dewalchaura), Bageshwar, Uttarakhand",
@@ -911,14 +1462,14 @@ export default function Bills() {
       footerInfo: {
         declaration:
           "We hereby declare that the tax on supplies has been paid by us under the composition scheme.",
-        signature: "Authorized Signature",
+        signature: newBill.additionalText || "Authorized Signature",
       },
     };
 
     addBill(bill);
 
     // Update stock quantities
-    selectedItems.forEach((billItem) => {
+    validItems.forEach((billItem) => {
       const success = reduceStock(billItem.id, billItem.quantity);
       if (!success) {
         console.warn(`Failed to reduce stock for ${billItem.name}`);
@@ -932,11 +1483,61 @@ export default function Bills() {
       customerName: "",
       targetTotal: "",
       paymentMode: "GPay",
+      additionalText: "",
     });
     setSelectedItems([]);
     setIsCreateDialogOpen(false);
     setActiveTab("view");
+    try {
+      localStorage.removeItem(draftKey);
+    } catch {}
   };
+
+  // Register shortcut handlers for Bills page
+  useEffect(() => {
+    const handleBillsShortcut = (action: string) => {
+      switch (action) {
+        case "create_bill":
+          setIsCreateDialogOpen(true);
+          break;
+        case "save_bill":
+          // Trigger create bill button if form is filled
+          if (newBill.customerName && selectedItems.length > 0) {
+            handleCreateBill();
+          }
+          break;
+        case "add_to_bill":
+          // Trigger add to bill if manual mode and item is selected
+          if (manualMode && itemToAdd.stockItemId) {
+            addManualItem();
+          }
+          break;
+        case "save_as_template":
+          if (selectedItems.length > 0) {
+            setIsSaveTemplateOpen(true);
+          }
+          break;
+        case "clear_items":
+          setSelectedItems([]);
+          break;
+      }
+    };
+
+    registerShortcutHandler("bills", handleBillsShortcut);
+
+    return () => {
+      unregisterShortcutHandler("bills");
+    };
+  }, [
+    selectedItems,
+    newBill,
+    manualMode,
+    itemToAdd,
+    registerShortcutHandler,
+    unregisterShortcutHandler,
+    handleCreateBill,
+    addManualItem,
+  ]);
 
   // Generate HTML for single bill
   const generateBillHTML = async (bill: any) => {
@@ -1133,8 +1734,8 @@ export default function Bills() {
                   <td>${index + 1}</td>
                   <td>${item.name}</td>
                   <td>${item.quantity}</td>
-                  <td>₹${item.price}</td>
-                  <td>₹${item.total}</td>
+                  <td>₹${Number(item.price).toFixed(2)}</td>
+                  <td>₹${Number(item.total).toFixed(2)}</td>
                 </tr>
               `,
                 )
@@ -1393,8 +1994,8 @@ export default function Bills() {
                   <td>${index + 1}</td>
                   <td>${item.name}</td>
                   <td>${item.quantity}</td>
-                  <td>₹${item.price}</td>
-                  <td>₹${item.total}</td>
+                  <td>₹${Number(item.price).toFixed(2)}</td>
+                  <td>₹${Number(item.total).toFixed(2)}</td>
                 </tr>
               `,
                 )
@@ -1747,8 +2348,8 @@ export default function Bills() {
                     <td>${index + 1}</td>
                     <td>${item.name}</td>
                     <td>${item.quantity}</td>
-                    <td>₹${item.price}</td>
-                    <td>₹${item.total}</td>
+                    <td>₹${Number(item.price).toFixed(2)}</td>
+                    <td>₹${Number(item.total).toFixed(2)}</td>
                   </tr>
                 `,
                   )
@@ -2052,8 +2653,8 @@ export default function Bills() {
                       <td>${itemIndex + 1}</td>
                       <td>${item.name}</td>
                       <td>${item.quantity}</td>
-                      <td>₹${item.price}</td>
-                      <td>₹${item.total}</td>
+                      <td>₹${Number(item.price).toFixed(2)}</td>
+                      <td>₹${Number(item.total).toFixed(2)}</td>
                     </tr>
                   `,
                     )
@@ -2114,10 +2715,24 @@ export default function Bills() {
   };
 
   const generateMegaReport = async (format: "pdf" | "excel") => {
-    const generatedBills = bills.filter((b) => b.status === "generated");
+    let generatedBills = bills.filter((b) => b.status === "generated");
+
+    // Apply date filter if enabled
+    if (
+      megaReportOptions.filterByDate &&
+      megaReportOptions.fromDate &&
+      megaReportOptions.toDate
+    ) {
+      generatedBills = generatedBills.filter((bill) => {
+        const billDate = new Date(bill.date.split("-").reverse().join("-"));
+        const fromDate = new Date(megaReportOptions.fromDate);
+        const toDate = new Date(megaReportOptions.toDate);
+        return billDate >= fromDate && billDate <= toDate;
+      });
+    }
 
     if (generatedBills.length === 0) {
-      alert("No generated bills found for report.");
+      alert("No generated bills found for the selected date range.");
       return;
     }
 
@@ -2164,7 +2779,7 @@ export default function Bills() {
         ...(megaReportOptions.hideCustomerNames
           ? {}
           : { "Customer Name": "TOTAL" }),
-        "Bill Total": totalSum,
+        "Bill Total": parseFloat(totalSum.toFixed(2)),
         "Payment Mode": "",
       });
 
@@ -2191,15 +2806,20 @@ export default function Bills() {
       });
 
       XLSX.utils.book_append_sheet(workbook, worksheet, "Mega Report");
+      const dateRange =
+        megaReportOptions.filterByDate &&
+        megaReportOptions.fromDate &&
+        megaReportOptions.toDate
+          ? `_${megaReportOptions.fromDate}_to_${megaReportOptions.toDate}`
+          : "";
       XLSX.writeFile(
         workbook,
-        `Mega_Report_${new Date().toISOString().split("T")[0]}.xlsx`,
+        `Mega_Report${dateRange}_${new Date().toISOString().split("T")[0]}.xlsx`,
       );
     } else {
       // PDF export using HTML
-      const totalSum = generatedBills.reduce(
-        (sum, bill) => sum + bill.subTotal,
-        0,
+      const totalSum = parseFloat(
+        generatedBills.reduce((sum, bill) => sum + bill.subTotal, 0).toFixed(2),
       );
       const htmlContent = `
         <!DOCTYPE html>
@@ -2314,7 +2934,7 @@ export default function Bills() {
           <div class="report-info">
             <p><strong>Report Generated:</strong> ${new Date().toLocaleDateString()}</p>
             <p><strong>Total Bills:</strong> ${generatedBills.length}</p>
-            <p><strong>Period:</strong> ${generatedBills.length > 0 ? `${generatedBills[0].date} to ${generatedBills[generatedBills.length - 1].date}` : "N/A"}</p>
+            <p><strong>Period:</strong> ${megaReportOptions.filterByDate && megaReportOptions.fromDate && megaReportOptions.toDate ? `${megaReportOptions.fromDate} to ${megaReportOptions.toDate}` : generatedBills.length > 0 ? `${generatedBills[0].date} to ${generatedBills[generatedBills.length - 1].date}` : "N/A"}</p>
           </div>
 
           <table class="report-table">
@@ -2346,7 +2966,7 @@ export default function Bills() {
             <tfoot>
               <tr class="total-row">
                 <td colspan="${megaReportOptions.hideCustomerNames ? "2" : "3"}"><strong>TOTAL:</strong></td>
-                <td><strong>₹${totalSum.toLocaleString()}</strong></td>
+                <td><strong>₹${totalSum.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</strong></td>
               </tr>
             </tfoot>
             `
@@ -2361,7 +2981,7 @@ export default function Bills() {
             <h2>Total Summary</h2>
             <div style="margin: 40px auto; padding: 30px; border: 2px solid #333; border-radius: 10px; width: 300px; background-color: #f8f9fa;">
               <p style="font-size: 18px; margin: 0;"><strong>Total Bills:</strong> ${generatedBills.length}</p>
-              <p style="font-size: 24px; margin: 20px 0 0 0; color: #333;"><strong>GRAND TOTAL: ₹${totalSum.toLocaleString()}</strong></p>
+              <p style="font-size: 24px; margin: 20px 0 0 0; color: #333;"><strong>GRAND TOTAL: ₹${totalSum.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</strong></p>
             </div>
           </div>
           `
@@ -2427,7 +3047,7 @@ export default function Bills() {
             </Button>
             <Button
               variant="outline"
-              onClick={() => generateMegaReport("excel")}
+              onClick={() => setIsMegaReportOptionsOpen(true)}
             >
               <Download className="h-4 w-4 mr-2" />
               Mega Report Excel
@@ -2750,7 +3370,7 @@ export default function Bills() {
                             billNumber: e.target.value,
                           }))
                         }
-                        placeholder="Auto-generated if empty"
+                        placeholder="Auto-populated with next number (editable)"
                       />
                     </div>
                     <div className="space-y-2">
@@ -2875,6 +3495,20 @@ export default function Bills() {
                     </div>
                   </div>
 
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Additional Field</Label>
+                    <Textarea
+                      value={newBill.additionalText}
+                      onChange={(e) =>
+                        setNewBill((prev) => ({
+                          ...prev,
+                          additionalText: e.target.value,
+                        }))
+                      }
+                      placeholder="Notes / Signature / Additional text"
+                    />
+                  </div>
+
                   {/* Payment Mode Selection */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -2953,7 +3587,8 @@ export default function Bills() {
                             • Generated total exactly matches target amount
                           </li>
                           <li>
-                            • Maximum 7 items per bill, up to 2 quantity each
+                            • Maximum 7 items per bill; quantity adjusts as
+                            needed
                           </li>
                         </ul>
                       </div>
@@ -3001,8 +3636,8 @@ export default function Bills() {
                                         {item.itemName}
                                       </span>
                                       <span className="text-sm text-muted-foreground">
-                                        ��{item.price} • Stock:{" "}
-                                        {item.availableQuantity}{" "}
+                                        ��{Number(item.price).toFixed(2)} •
+                                        Stock: {item.availableQuantity}{" "}
                                         {item.blocked && "• (Blocked)"}
                                       </span>
                                     </div>
@@ -3108,11 +3743,12 @@ export default function Bills() {
                             </tr>
                           </thead>
                           <tbody>
-                            {selectedItems.map((item, index) => (
-                              <tr key={index} className="border-b">
-                                <td className="p-3">{item.name}</td>
-                                <td className="p-3">
-                                  {manualMode ? (
+                            {selectedItems.map((item, index) => {
+                              if (item.total <= 0) return null;
+                              return (
+                                <tr key={index} className="border-b">
+                                  <td className="p-3">{item.name}</td>
+                                  <td className="p-3">
                                     <Input
                                       type="number"
                                       value={item.quantity}
@@ -3125,15 +3761,11 @@ export default function Bills() {
                                       }
                                       className="w-20"
                                     />
-                                  ) : (
-                                    item.quantity
-                                  )}
-                                </td>
-                                <td className="p-3">
-                                  {manualMode ? (
+                                  </td>
+                                  <td className="p-3">
                                     <Input
                                       type="number"
-                                      value={item.price}
+                                      value={Number(item.price).toFixed(2)}
                                       onChange={(e) =>
                                         updateSelectedItem(
                                           index,
@@ -3143,22 +3775,22 @@ export default function Bills() {
                                       }
                                       className="w-24"
                                     />
-                                  ) : (
-                                    `₹${item.price}`
-                                  )}
-                                </td>
-                                <td className="p-3">��{item.total}</td>
-                                <td className="p-3">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => removeSelectedItem(index)}
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                </td>
-                              </tr>
-                            ))}
+                                  </td>
+                                  <td className="p-3">
+                                    ��{Number(item.total).toFixed(2)}
+                                  </td>
+                                  <td className="p-3">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => removeSelectedItem(index)}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                           <tfoot>
                             <tr className="bg-muted/20 font-bold">
@@ -3166,7 +3798,7 @@ export default function Bills() {
                                 Total:
                               </td>
                               <td className="p-3">
-                                ₹
+                                ���
                                 {selectedItems.reduce(
                                   (sum, item) => sum + item.total,
                                   0,
@@ -3210,6 +3842,72 @@ export default function Bills() {
                     </div>
                   )}
 
+                  {/* Template Management */}
+                  {selectedItems.length > 0 && (
+                    <div className="border-t pt-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label className="font-semibold">Templates</Label>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setIsSaveTemplateOpen(true)}
+                        >
+                          <BookmarkPlus className="h-4 w-4 mr-2" />
+                          Save as Template
+                        </Button>
+                      </div>
+                      {templates.length > 0 && (
+                        <div className="space-y-2">
+                          <Label className="text-sm text-muted-foreground">
+                            Or load from saved templates:
+                          </Label>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {templates.map((template) => (
+                              <div
+                                key={template.id}
+                                className="flex items-center justify-between p-2 bg-muted/30 rounded"
+                              >
+                                <div className="flex-1">
+                                  <p className="font-medium text-sm">
+                                    {template.name}
+                                  </p>
+                                  {template.description && (
+                                    <p className="text-xs text-muted-foreground">
+                                      {template.description}
+                                    </p>
+                                  )}
+                                  <p className="text-xs text-muted-foreground">
+                                    {template.items.length} items
+                                  </p>
+                                </div>
+                                <div className="flex space-x-1">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() =>
+                                      handleLoadTemplate(template.id)
+                                    }
+                                  >
+                                    <Copy className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() =>
+                                      handleDeleteTemplate(template.id)
+                                    }
+                                  >
+                                    <Trash2 className="h-3 w-3 text-red-500" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <div className="flex justify-end space-x-2">
                     <Button
                       variant="outline"
@@ -3237,7 +3935,7 @@ export default function Bills() {
                 open={!!selectedBill}
                 onOpenChange={() => setSelectedBill(null)}
               >
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Bill Details - {selectedBill.id}</DialogTitle>
                   </DialogHeader>
@@ -3297,8 +3995,12 @@ export default function Bills() {
                               <tr key={index} className="border-b">
                                 <td className="p-3">{item.name}</td>
                                 <td className="p-3">{item.quantity}</td>
-                                <td className="p-3">₹{item.price}</td>
-                                <td className="p-3">₹{item.total}</td>
+                                <td className="p-3">
+                                  ₹{Number(item.price).toFixed(2)}
+                                </td>
+                                <td className="p-3">
+                                  ₹{Number(item.total).toFixed(2)}
+                                </td>
                               </tr>
                             ))}
                           </tbody>
@@ -3324,7 +4026,7 @@ export default function Bills() {
                 open={isEditDialogOpen}
                 onOpenChange={setIsEditDialogOpen}
               >
-                <DialogContent className="max-w-4xl">
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>
                       Edit Bill - {editingBill.billNumber}
@@ -3412,7 +4114,7 @@ export default function Bills() {
                                 <td className="p-3">
                                   <Input
                                     type="number"
-                                    value={item.price}
+                                    value={Number(item.price).toFixed(2)}
                                     onChange={(e) =>
                                       updateEditItem(
                                         index,
@@ -3423,15 +4125,37 @@ export default function Bills() {
                                     className="w-24"
                                   />
                                 </td>
-                                <td className="p-3">���{item.total}</td>
                                 <td className="p-3">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => removeEditItem(index)}
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
+                                  ���{Number(item.total).toFixed(2)}
+                                </td>
+                                <td className="p-3">
+                                  <div className="flex space-x-1">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => moveEditItemUp(index)}
+                                      disabled={index === 0}
+                                      title="Move up"
+                                    >
+                                      <ArrowUp className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => moveEditItemDown(index)}
+                                      disabled={index === editItems.length - 1}
+                                      title="Move down"
+                                    >
+                                      <ArrowDown className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => removeEditItem(index)}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
                                 </td>
                               </tr>
                             ))}
@@ -3581,9 +4305,9 @@ export default function Bills() {
             >
               <DialogContent className="max-w-md">
                 <DialogHeader>
-                  <DialogTitle>Mega Report PDF Options</DialogTitle>
+                  <DialogTitle>Mega Report Options</DialogTitle>
                   <DialogDescription>
-                    Customize your mega report PDF settings
+                    Customize your mega report PDF and Excel settings
                   </DialogDescription>
                 </DialogHeader>
 
@@ -3640,6 +4364,59 @@ export default function Bills() {
                     <Label htmlFor="includeGST">Include GST Information</Label>
                   </div>
 
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="filterByDate"
+                      checked={megaReportOptions.filterByDate}
+                      onChange={(e) =>
+                        setMegaReportOptions((prev) => ({
+                          ...prev,
+                          filterByDate: e.target.checked,
+                        }))
+                      }
+                      className="rounded"
+                    />
+                    <Label htmlFor="filterByDate">Filter by Date Range</Label>
+                  </div>
+
+                  {megaReportOptions.filterByDate && (
+                    <div className="space-y-2">
+                      <div>
+                        <Label htmlFor="fromDate" className="text-sm">
+                          From Date
+                        </Label>
+                        <Input
+                          id="fromDate"
+                          type="date"
+                          value={megaReportOptions.fromDate}
+                          onChange={(e) =>
+                            setMegaReportOptions((prev) => ({
+                              ...prev,
+                              fromDate: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="toDate" className="text-sm">
+                          To Date
+                        </Label>
+                        <Input
+                          id="toDate"
+                          type="date"
+                          value={megaReportOptions.toDate}
+                          onChange={(e) =>
+                            setMegaReportOptions((prev) => ({
+                              ...prev,
+                              toDate: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   <div className="bg-muted/30 p-3 rounded-lg">
                     <h4 className="font-medium mb-2 text-sm">
                       Preview Settings
@@ -3671,6 +4448,15 @@ export default function Bills() {
                     onClick={() => setIsMegaReportOptionsOpen(false)}
                   >
                     Cancel
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      generateMegaReport("excel");
+                      setIsMegaReportOptionsOpen(false);
+                    }}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Generate Excel
                   </Button>
                   <Button
                     onClick={() => {
@@ -3816,6 +4602,76 @@ export default function Bills() {
                   >
                     <FileText className="h-4 w-4 mr-2" />
                     Create PDF Book
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Save as Template Dialog */}
+            <Dialog
+              open={isSaveTemplateOpen}
+              onOpenChange={setIsSaveTemplateOpen}
+            >
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Save as Template</DialogTitle>
+                  <DialogDescription>
+                    Save current items as a reusable template for future bills
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="template-name">Template Name *</Label>
+                    <Input
+                      id="template-name"
+                      value={templateName}
+                      onChange={(e) => setTemplateName(e.target.value)}
+                      placeholder="e.g., Regular Weekly Order"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="template-description">Description</Label>
+                    <Textarea
+                      id="template-description"
+                      value={templateDescription}
+                      onChange={(e) => setTemplateDescription(e.target.value)}
+                      placeholder="Optional description of what this template is for"
+                      rows={3}
+                    />
+                  </div>
+                  <div className="bg-muted/30 p-3 rounded-lg">
+                    <h4 className="font-medium mb-2 text-sm">
+                      Template Preview
+                    </h4>
+                    <div className="text-xs space-y-1">
+                      <div className="flex justify-between">
+                        <span>Items:</span>
+                        <span>{selectedItems.length} items</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Total Value:</span>
+                        <span>
+                          ₹
+                          {selectedItems
+                            .reduce((sum, item) => sum + item.total, 0)
+                            .toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsSaveTemplateOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSaveAsTemplate}>
+                    <BookmarkPlus className="h-4 w-4 mr-2" />
+                    Save Template
                   </Button>
                 </div>
               </DialogContent>

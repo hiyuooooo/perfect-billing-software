@@ -44,6 +44,7 @@ import * as XLSX from "xlsx";
 import { useStock } from "@/components/StockContext";
 import { useBill } from "@/components/BillContext";
 import { useAccount } from "@/components/AccountManager";
+import { useShortcuts } from "@/components/ShortcutsContext";
 
 // Mock stock data based on your Python code structure
 const mockStockData = [
@@ -198,6 +199,9 @@ export default function Stock() {
       );
     }
   }, [activeAccount?.id, stockItems.length]);
+
+  // Register shortcut handlers for Stock page
+  const { registerShortcutHandler, unregisterShortcutHandler } = useShortcuts();
 
   // Function to check if a stock item is used in any bills
   const isStockUsedInBills = (
@@ -386,6 +390,40 @@ export default function Stock() {
     setSuggestions([]);
     setIsQuickAddOpen(false);
   };
+
+  // Register shortcut handlers for Stock page
+  useEffect(() => {
+    const handleStockShortcut = (action: string) => {
+      switch (action) {
+        case "quick_add_stock":
+          // Open Quick Add Stock dialog
+          setIsQuickAddOpen(true);
+          break;
+        case "add_stock":
+          // Trigger add stock if quick add dialog is open and item is selected
+          if (
+            isQuickAddOpen &&
+            quickAddData.itemPrefix &&
+            quickAddData.quantity
+          ) {
+            handleQuickAdd();
+          }
+          break;
+      }
+    };
+
+    registerShortcutHandler("stock", handleStockShortcut);
+
+    return () => {
+      unregisterShortcutHandler("stock");
+    };
+  }, [
+    isQuickAddOpen,
+    quickAddData,
+    registerShortcutHandler,
+    unregisterShortcutHandler,
+    handleQuickAdd,
+  ]);
 
   const saveEdit = () => {
     if (editingId === null) return;

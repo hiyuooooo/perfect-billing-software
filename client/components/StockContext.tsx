@@ -4,10 +4,11 @@ import { useAccount } from "./AccountManager";
 interface StockItem {
   id: number;
   itemName: string;
-  price: number;
+  price: number; // cost or base price
+  mrp?: number; // selling MRP; if absent, use price
   availableQuantity: number;
   lowStockThreshold: number;
-  blocked?: boolean; // Add blocked field
+  blocked?: boolean;
 }
 
 interface StockContextType {

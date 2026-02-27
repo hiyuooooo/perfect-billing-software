@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import {
@@ -161,6 +162,8 @@ export default function Transactions() {
     deleteAllTransactions,
   } = useTransaction();
 
+  const navigate = useNavigate();
+
   const handleDeleteAllTransactions = () => {
     if (
       confirm(
@@ -204,6 +207,8 @@ export default function Transactions() {
   const [isGenerateBillsOpen, setIsGenerateBillsOpen] = useState(false);
   const [startingBillNumber, setStartingBillNumber] = useState("");
   const [billsToBlock, setBillsToBlock] = useState("");
+  const [isGeneratingBills, setIsGeneratingBills] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState("");
 
   // Set default starting bill number to highest existing bill number + 1
   useEffect(() => {
@@ -1105,6 +1110,60 @@ export default function Transactions() {
                                 <Button
                                   size="sm"
                                   variant="outline"
+                                  title="Auto Bill"
+                                  onClick={() => {
+                                    try {
+                                      if (activeAccount?.id) {
+                                        window.dispatchEvent(
+                                          new CustomEvent(
+                                            "force-save-account-data",
+                                            {
+                                              detail: {
+                                                accountId: activeAccount.id,
+                                              },
+                                            },
+                                          ),
+                                        );
+                                      }
+                                      const nextBill =
+                                        bills.length > 0
+                                          ? Math.max(
+                                              ...bills.map(
+                                                (b: any) => b.billNumber,
+                                              ),
+                                            ) + 1
+                                          : 1001;
+                                      const cleanCustomer =
+                                        transaction.customerName.endsWith("_c")
+                                          ? transaction.customerName.slice(
+                                              0,
+                                              -2,
+                                            )
+                                          : transaction.customerName;
+                                      const params = new URLSearchParams({
+                                        prefillBill: String(nextBill),
+                                        prefillCustomer: cleanCustomer,
+                                        prefillDate: transaction.date,
+                                        prefillTarget: String(
+                                          transaction.total,
+                                        ),
+                                        prefillPayment: getPaymentMode(
+                                          transaction.customerName,
+                                        ),
+                                        prefillAuto: "true",
+                                        prefillSubmit: "false",
+                                      });
+                                      navigate(`/bills?${params.toString()}`);
+                                    } catch (e) {
+                                      console.error(e);
+                                    }
+                                  }}
+                                >
+                                  <FileText className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
                                   onClick={() =>
                                     generateTransactionPDF(transaction)
                                   }
@@ -1159,6 +1218,14 @@ export default function Transactions() {
             }
             className="bg-green-600 hover:bg-green-700"
             onClick={() => {
+              console.log(
+                "Generate Bills button clicked - attempting to open dialog",
+              );
+              console.log(
+                "Selected transactions:",
+                getSelectedTransactions().length,
+              );
+              console.log("Invalid count:", summary.invalidCount);
               setIsGenerateBillsOpen(true);
               loadBlockedBills();
             }}
@@ -1233,53 +1300,145 @@ export default function Transactions() {
                 </div>
               </div>
 
+              {isGeneratingBills && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                    <p className="font-medium text-blue-900">
+                      Generating bills...
+                    </p>
+                  </div>
+                  {generationProgress && (
+                    <p className="text-sm text-blue-800">
+                      {generationProgress}
+                    </p>
+                  )}
+                  <p className="text-xs text-blue-700 mt-2">
+                    This may take a minute or two. Please wait...
+                  </p>
+                </div>
+              )}
+
               <div className="flex justify-end space-x-2">
                 <Button
                   variant="outline"
                   onClick={() => setIsGenerateBillsOpen(false)}
+                  disabled={isGeneratingBills}
                 >
                   Cancel
                 </Button>
                 <Button
-                  onClick={() => {
-                    const selectedTransactions = getSelectedTransactions();
-                    if (selectedTransactions.length === 0) {
-                      alert(
-                        "Please select at least one transaction to generate bills.",
+                  onClick={async () => {
+                    try {
+                      console.log(
+                        "=== GENERATE BILLS DIALOG BUTTON CLICKED ===",
                       );
-                      return;
+                      const selectedTransactions = getSelectedTransactions();
+                      console.log(
+                        "Selected transactions count:",
+                        selectedTransactions.length,
+                      );
+
+                      if (selectedTransactions.length === 0) {
+                        alert(
+                          "Please select at least one transaction to generate bills.",
+                        );
+                        return;
+                      }
+
+                      const startBillNum = parseInt(startingBillNumber);
+                      if (isNaN(startBillNum)) {
+                        alert("Please enter a valid starting bill number.");
+                        return;
+                      }
+
+                      const blockedNumbers = billsToBlock
+                        ? billsToBlock
+                            .split(",")
+                            .map((n) => parseInt(n.trim()))
+                            .filter((n) => !isNaN(n))
+                        : [];
+
+                      setIsGeneratingBills(true);
+                      setGenerationProgress("Initializing...");
+
+                      console.log("Bill generation parameters:", {
+                        transactionCount: selectedTransactions.length,
+                        startBillNumber: startBillNum,
+                        blockedNumbers: blockedNumbers,
+                        stockAvailable: getUnblockedStock().length,
+                      });
+
+                      console.log("Calling generateBillsFromTransactions...");
+                      setGenerationProgress(
+                        `Generating ${selectedTransactions.length} bills...`,
+                      );
+
+                      const generatedBills =
+                        await generateBillsFromTransactions(
+                          selectedTransactions,
+                          startBillNum,
+                          blockedNumbers,
+                          getUnblockedStock(),
+                          reduceStock,
+                          (billNumber, message) => {
+                            setGenerationProgress(`Bill ${billNumber}/${selectedTransactions.length}: ${message}`);
+                          },
+                        );
+
+                      console.log(
+                        "Bills generation completed. Generated:",
+                        generatedBills.length,
+                      );
+
+                      if (!Array.isArray(generatedBills)) {
+                        throw new Error(
+                          "generateBillsFromTransactions did not return an array",
+                        );
+                      }
+
+                      if (generatedBills.length === 0) {
+                        alert(
+                          "No bills were generated. This might be due to invalid stock or transaction data.",
+                        );
+                        setIsGeneratingBills(false);
+                        return;
+                      }
+
+                      // Mark selected transactions as having bills generated
+                      markBillsGenerated(selectedTransactions.map((t) => t.id));
+
+                      setGenerationProgress(
+                        `Successfully generated ${generatedBills.length} bills!`,
+                      );
+
+                      // Wait a moment before closing to show the success message
+                      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+                      alert(
+                        `✅ Successfully generated ${generatedBills.length} bills! Check the Bills section to view them.`,
+                      );
+                      setIsGenerateBillsOpen(false);
+                      setStartingBillNumber("");
+                      setBillsToBlock("");
+                      setIsGeneratingBills(false);
+                      setGenerationProgress("");
+                    } catch (error) {
+                      console.error("=== ERROR GENERATING BILLS ===", error);
+                      const errorMessage =
+                        error instanceof Error ? error.message : String(error);
+                      console.error("Error details:", errorMessage);
+                      setIsGeneratingBills(false);
+                      setGenerationProgress("");
+                      alert(
+                        `❌ Error generating bills:\n\n${errorMessage}\n\nCheck the browser console (F12) for more details.`,
+                      );
                     }
-
-                    const startBillNum = parseInt(startingBillNumber);
-                    const blockedNumbers = billsToBlock
-                      ? billsToBlock
-                          .split(",")
-                          .map((n) => parseInt(n.trim()))
-                          .filter((n) => !isNaN(n))
-                      : [];
-
-                    const generatedBills = generateBillsFromTransactions(
-                      selectedTransactions,
-                      startBillNum,
-                      blockedNumbers,
-                      getUnblockedStock(),
-                      reduceStock,
-                    );
-
-                    // Mark selected transactions as having bills generated
-                    markBillsGenerated(selectedTransactions.map((t) => t.id));
-
-                    alert(
-                      `Successfully generated ${generatedBills.length} bills! Check the Bills section to view them.`,
-                    );
-                    setIsGenerateBillsOpen(false);
-                    setStartingBillNumber("");
-                    setBillsToBlock("");
                   }}
-                  disabled={!startingBillNumber}
+                  disabled={!startingBillNumber || isGeneratingBills}
                 >
                   <FileText className="h-4 w-4 mr-2" />
-                  Generate Bills
+                  {isGeneratingBills ? "Generating..." : "Generate Bills"}
                 </Button>
               </div>
             </div>

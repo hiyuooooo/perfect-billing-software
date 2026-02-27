@@ -13,6 +13,9 @@ import { StockProvider } from "@/components/StockContext";
 import { TransactionProvider } from "@/components/TransactionContext";
 import { CustomerProvider } from "@/components/CustomerContext";
 import { IterationMonitorProvider } from "@/components/IterationMonitor";
+import { TemplateProvider } from "@/components/TemplateContext";
+import { ShortcutsProvider } from "@/components/ShortcutsContext";
+import { DarkModeProvider } from "@/components/DarkModeContext";
 import { useState } from "react";
 import Login from "./pages/Login";
 import Index from "./pages/Index";
@@ -49,48 +52,63 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AccountProvider>
-          <CustomerProvider>
-            <StockProvider>
-              <TransactionProvider>
-                <IterationMonitorProvider>
-                  <BillProvider>
-                    <Toaster />
-                    <Sonner />
-                    <BrowserRouter>
-                      {!isLoggedIn ? (
-                        <Login onLogin={handleLogin} />
-                      ) : (
-                        <Routes>
-                          <Route path="/" element={<Index />} />
-                          <Route
-                            path="/transactions"
-                            element={<Transactions />}
-                          />
-                          <Route path="/bills" element={<Bills />} />
-                          <Route
-                            path="/bill-blocker"
-                            element={<BillBlocker />}
-                          />
-                          <Route path="/stock" element={<Stock />} />
-                          <Route path="/customers" element={<Customers />} />
-                          <Route path="/reports" element={<Reports />} />
-                          <Route path="/analytics" element={<Analytics />} />
-                          <Route
-                            path="/data-management"
-                            element={<DataManagement />}
-                          />
-                          <Route path="/settings" element={<Settings />} />
-                          <Route path="*" element={<NotFound />} />
-                        </Routes>
-                      )}
-                    </BrowserRouter>
-                  </BillProvider>
-                </IterationMonitorProvider>
-              </TransactionProvider>
-            </StockProvider>
-          </CustomerProvider>
-        </AccountProvider>
+        <DarkModeProvider>
+          <AccountProvider>
+            <CustomerProvider>
+              <StockProvider>
+                <TransactionProvider>
+                  <IterationMonitorProvider>
+                    <TemplateProvider>
+                      <BillProvider>
+                        <Toaster />
+                        <Sonner />
+                        <BrowserRouter>
+                          <ShortcutsProvider>
+                            {!isLoggedIn ? (
+                              <Login onLogin={handleLogin} />
+                            ) : (
+                              <Routes>
+                                <Route path="/" element={<Index />} />
+                                <Route
+                                  path="/transactions"
+                                  element={<Transactions />}
+                                />
+                                <Route path="/bills" element={<Bills />} />
+                                <Route
+                                  path="/bill-blocker"
+                                  element={<BillBlocker />}
+                                />
+                                <Route path="/stock" element={<Stock />} />
+                                <Route
+                                  path="/customers"
+                                  element={<Customers />}
+                                />
+                                <Route path="/reports" element={<Reports />} />
+                                <Route
+                                  path="/analytics"
+                                  element={<Analytics />}
+                                />
+                                <Route
+                                  path="/data-management"
+                                  element={<DataManagement />}
+                                />
+                                <Route
+                                  path="/settings"
+                                  element={<Settings />}
+                                />
+                                <Route path="*" element={<NotFound />} />
+                              </Routes>
+                            )}
+                          </ShortcutsProvider>
+                        </BrowserRouter>
+                      </BillProvider>
+                    </TemplateProvider>
+                  </IterationMonitorProvider>
+                </TransactionProvider>
+              </StockProvider>
+            </CustomerProvider>
+          </AccountProvider>
+        </DarkModeProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
